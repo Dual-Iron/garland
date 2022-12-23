@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -193,6 +195,8 @@ namespace System
                 ptr[i] = value;
             }
         }
+
+        public static implicit operator Span<T>(T[] array) => array.AsSpan();
     }
 
     public unsafe readonly ref struct ReadOnlySpan<T>
@@ -242,14 +246,7 @@ namespace System
         }
 
         public static implicit operator ReadOnlySpan<T>(Span<T> span) => new(span.Pointer, span.Length);
-        public static implicit operator ReadOnlySpan<T>(T[] array)
-        {
-            unsafe {
-                fixed (T* ptr = array) {
-                    return new(ptr, array.Length);
-                }
-            }
-        }
+        public static implicit operator ReadOnlySpan<T>(T[] array) => array.AsSpan();
     }
 
     public static class SpanExt
@@ -265,5 +262,101 @@ namespace System
         public static Span<T> AsSpan<T>(this T[] array, int start) => array.AsSpan().Slice(start);
         public static Span<T> AsSpan<T>(this T[] array, int start, int length) => array.AsSpan().Slice(start, length);
     }
+
+    namespace Buffers.Binary
+    {
+        public static class BinaryPrimitives
+        {
+            static uint RotateLeft(uint value, int offset) => (value << offset) | (value >> (32 - offset));
+            static uint RotateRight(uint value, int offset) => (value >> offset) | (value << (32 - offset));
+
+            public static ushort ReverseEndianness(ushort value) => (ushort)((value >> 8) + (value << 8));
+            public static uint ReverseEndianness(uint value) => RotateRight(value & 0x00FF00FFu, 8) + RotateLeft(value & 0xFF00FF00u, 8);
+            public static ulong ReverseEndianness(ulong value) => (ReverseEndianness((uint)value) << 32) + ReverseEndianness((uint)(value >> 32));
+
+            public static short ReverseEndianness(short value) => (short)ReverseEndianness((ushort)value);
+            public static int ReverseEndianness(int value) => (int)ReverseEndianness((uint)value);
+            public static long ReverseEndianness(long value) => (long)ReverseEndianness((ulong)value);
+        }
+    }
 }
 #endif
+
+namespace System
+{
+    internal static class Ext
+    {
+        public unsafe static int ToInt32(this ReadOnlySpan<byte> value)
+        {
+            if (8 > value.Length) throw new ArgumentException("span length");
+
+            return *(int*)value.Pointer;
+        }
+
+        public unsafe static long ToInt64(this ReadOnlySpan<byte> value)
+        {
+            if (8 > value.Length) throw new ArgumentException("span length");
+
+            return *(long*)value.Pointer;
+        }
+
+        public unsafe static float ToSingle(this ReadOnlySpan<byte> value)
+        {
+            int num = ToInt32(value);
+            return *(float*)(&num);
+        }
+
+        public unsafe static double ToDouble(this ReadOnlySpan<byte> value)
+        {
+            long num = ToInt64(value);
+            return *(double*)(&num);
+        }
+
+        public static IPAddress MapToIPv6(this IPAddress self)
+        {
+            if (self.AddressFamily == AddressFamily.InterNetworkV6) {
+                return self;
+            }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            long m_Address = self.Address;
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            ushort[] labels = new ushort[8];
+            labels[5] = 0xFFFF;
+            labels[6] = (ushort)(((m_Address & 0x0000FF00) >> 8) | ((m_Address & 0x000000FF) << 8));
+            labels[7] = (ushort)(((m_Address & 0xFF000000) >> 24) | ((m_Address & 0x00FF0000) >> 8));
+
+            // Inverted from .ctor(byte[],long)
+            byte[] bytes = new byte[16];
+            for (int i = 0; i < 8; i++) {
+                bytes[i * 2] = (byte)(labels[i] >> 8);
+                bytes[i * 2 + 1] = (byte)(labels[i] & 0xFF);
+            }
+
+            return new IPAddress(bytes, 0);
+        }
+
+        public static IPAddress MapToIPv4(this IPAddress self)
+        {
+            if (self.AddressFamily == AddressFamily.InterNetwork) {
+                return self;
+            }
+
+            // Directly from .ctor(byte[],long)
+            ushort[] m_Numbers = new ushort[8];
+            byte[] bytes = self.GetAddressBytes();
+            for (int i = 0; i < 8; i++) {
+                m_Numbers[i] = (ushort)((bytes[i * 2] << 8) + bytes[i * 2 + 1]);
+            }
+
+            // Cast the ushort values to a uint and mask with unsigned literal before bit shifting.
+            // Otherwise, we can end up getting a negative value for any IPv4 address that ends with
+            // a byte higher than 127 due to sign extension of the most significant 1 bit.
+            long address = ((m_Numbers[6] & 0x0000FF00u) >> 8) | ((m_Numbers[6] & 0x000000FFu) << 8) |
+                    ((((m_Numbers[7] & 0x0000FF00u) >> 8) | ((m_Numbers[7] & 0x000000FFu) << 8)) << 16);
+
+            return new IPAddress(address);
+        }
+    }
+}

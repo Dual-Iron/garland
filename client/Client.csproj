@@ -7,9 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Rackspace.HttpClient35" Version="1.0.0-beta003" />
     <Reference Include="../common/lib/*.refstub.dll" />
-    <PackageReference Include="System.Threading.Tasks.Unofficial" Version="3.1.0" />
     <Compile Include="../common/**/*.cs">
       <Visible>true</Visible>
     </Compile>

@@ -298,7 +298,7 @@ namespace Lidgren.Network
 			}
 
 			var bytes = PeekBytes(stackalloc byte[4]);
-			return BitConverter.ToSingle(bytes);
+			return Ext.ToSingle(bytes);
 		}
 
 		/// <summary>
@@ -316,7 +316,7 @@ namespace Lidgren.Network
 			}
 
 			var bytes = PeekBytes(stackalloc byte[8]);
-			return BitConverter.ToDouble(bytes);
+			return Ext.ToDouble(bytes);
 		}
 
 		/// <summary>

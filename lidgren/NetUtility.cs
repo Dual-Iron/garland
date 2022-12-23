@@ -29,7 +29,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -71,7 +70,7 @@ namespace Lidgren.Network
 		{
 			return ToHexString(data.AsSpan(offset, length));
 		}
-		
+
 		/// <summary>
 		/// Create a hex string from an array of bytes
 		/// </summary>
@@ -79,8 +78,7 @@ namespace Lidgren.Network
 		{
 			char[] c = new char[data.Length * 2];
 			byte b;
-			for (int i = 0; i < data.Length; ++i)
-			{
+			for (int i = 0; i < data.Length; ++i) {
 				b = ((byte)(data[i] >> 4));
 				c[i * 2] = (char)(b > 9 ? b + 0x37 : b + 0x30);
 				b = ((byte)(data[i] & 0xF));
@@ -205,8 +203,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public static int GetWindowSize(NetDeliveryMethod method)
 		{
-			switch (method)
-			{
+			switch (method) {
 				case NetDeliveryMethod.Unknown:
 					return 0;
 
@@ -235,18 +232,13 @@ namespace Lidgren.Network
 			while (h * 3 + 1 <= list.Length)
 				h = 3 * h + 1;
 
-			while (h > 0)
-			{
-				for (int i = h - 1; i < list.Length; i++)
-				{
+			while (h > 0) {
+				for (int i = h - 1; i < list.Length; i++) {
 					tmp = list[i];
 					j = i;
-					while (true)
-					{
-						if (j >= h)
-						{
-							if (string.Compare(list[j - h].Name, tmp.Name, StringComparison.InvariantCulture) > 0)
-							{
+					while (true) {
+						if (j >= h) {
+							if (string.Compare(list[j - h].Name, tmp.Name, StringComparison.InvariantCulture) > 0) {
 								list[j] = list[j - h];
 								j -= h;
 							}
@@ -283,8 +275,7 @@ namespace Lidgren.Network
 		{
 			var cnt = list.Count;
 			StringBuilder bdr = new StringBuilder(cnt * 5); // educated guess
-			for(int i=0;i<cnt;i++)
-			{
+			for (int i = 0; i < cnt; i++) {
 				bdr.Append(list[i].ToString());
 				if (i != cnt - 1)
 					bdr.Append(", ");
@@ -298,37 +289,36 @@ namespace Lidgren.Network
 			return ComputeSHAHash(bytes, 0, bytes.Length);
 		}
 
-        /// <summary>
-        /// Copies from <paramref name="src"/> to <paramref name="dst"/>. Maps to an IPv6 address
-        /// </summary>
-        /// <param name="src">Source.</param>
-        /// <param name="dst">Destination.</param>
-        internal static void CopyEndpoint(IPEndPoint src, IPEndPoint dst)
-        {
-            dst.Port = src.Port;
-            if (src.AddressFamily == AddressFamily.InterNetwork)
-                dst.Address = src.Address.MapToIPv6();
-            else
-                dst.Address = src.Address;
-        }
+		/// <summary>
+		/// Copies from <paramref name="src"/> to <paramref name="dst"/>. Maps to an IPv6 address
+		/// </summary>
+		/// <param name="src">Source.</param>
+		/// <param name="dst">Destination.</param>
+		internal static void CopyEndpoint(IPEndPoint src, IPEndPoint dst)
+		{
+			dst.Port = src.Port;
+			if (src.AddressFamily == AddressFamily.InterNetwork)
+				dst.Address = src.Address.MapToIPv6();
+			else
+				dst.Address = src.Address;
+		}
 
-        /// <summary>
-        /// Maps the IPEndPoint object to an IPv6 address. Has allocation
-        /// </summary>
-        internal static IPEndPoint MapToIPv6(IPEndPoint endPoint)
-        {
-            if (endPoint.AddressFamily == AddressFamily.InterNetwork)
-                return new IPEndPoint(endPoint.Address.MapToIPv6(), endPoint.Port);
-            return endPoint;
-        }
+		/// <summary>
+		/// Maps the IPEndPoint object to an IPv6 address. Has allocation
+		/// </summary>
+		internal static IPEndPoint MapToIPv6(IPEndPoint endPoint)
+		{
+			if (endPoint.AddressFamily == AddressFamily.InterNetwork)
+				return new IPEndPoint(endPoint.Address.MapToIPv6(), endPoint.Port);
+			return endPoint;
+		}
 
 		// MemoryMarshal.Read and MemoryMarshal.Write are not GUARANTEED to allow unaligned reads/writes.
 		// The current CoreCLR implementation does but that's an implementation detail.
 		// These are basically MemoryMarshal.Read/Write but well, guaranteed to allow unaligned access.
 #if NET7_0_OR_GREATER
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-        internal static T ReadUnaligned<T>(ReadOnlySpan<byte> source) where T : unmanaged
+		internal static T ReadUnaligned<T>(ReadOnlySpan<byte> source) where T : unmanaged
         {
             if (Unsafe.SizeOf<T>() > source.Length)
             {
@@ -337,10 +327,17 @@ namespace Lidgren.Network
 
             return Unsafe.ReadUnaligned<T>(ref MemoryMarshal.GetReference(source));
         }
+#else
+		internal static T ReadUnaligned<T>(ReadOnlySpan<byte> source) where T : unmanaged
+		{
+			unsafe {
+				return *(T*)source.Pointer;
+			}
+		}
+#endif
 
 #if NET7_0_OR_GREATER
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         internal static void WriteUnaligned<T>(Span<byte> destination, ref T value) where T : unmanaged
         {
             if ((uint)Unsafe.SizeOf<T>() > (uint)destination.Length)
@@ -350,5 +347,13 @@ namespace Lidgren.Network
 
             Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
         }
+#else
+        internal static void WriteUnaligned<T>(Span<byte> destination, ref T value) where T : unmanaged
+        {
+			unsafe {
+				*(T*)destination.Pointer = value;
+			}
+        }
+#endif
     }
 }
