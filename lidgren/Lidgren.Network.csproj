@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net7.0</TargetFrameworks>
+        <Version>0.2.3</Version>
+        <AssemblyName>SpaceWizards.Lidgren.Network</AssemblyName>
+        <IncludeSymbols>true</IncludeSymbols>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <!-- Uncomment the following line to not get statistics in RELEASE mode -->
+        <DefineConstants>$(DefineConstants);USE_RELEASE_STATISTICS</DefineConstants>
+        <PackageReleaseNotes>https://github.com/space-wizards/SpaceWizards.Lidgren.Network/blob/wizards/RELEASE-NOTES.md</PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.1" Condition="'$(TargetFramework)' == 'netstandard2.1'" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+</Project>
