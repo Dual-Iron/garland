@@ -58,7 +58,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads a signed byte
 		/// </summary>
-		[CLSCompliant(false)]
 		public sbyte ReadSByte()
 		{
 			sbyte retval = PeekSByte();
@@ -192,7 +191,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads a 16 bit unsigned integer written using Write(UInt16)
 		/// </summary>
-		[CLSCompliant(false)]
 		public UInt16 ReadUInt16()
 		{
 			ushort retval = PeekUInt16();
@@ -214,7 +212,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads a 32 bit signed integer written using Write(Int32)
 		/// </summary>
-		[CLSCompliant(false)]
 		public bool ReadInt32(out Int32 result)
 		{
 			if (m_bitLength - m_readPosition < 32)
@@ -242,7 +239,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads an 32 bit unsigned integer written using Write(UInt32)
 		/// </summary>
-		[CLSCompliant(false)]
 		public UInt32 ReadUInt32()
 		{
 			uint retval = PeekUInt32();
@@ -253,7 +249,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads an 32 bit unsigned integer written using Write(UInt32) and returns true for success
 		/// </summary>
-		[CLSCompliant(false)]
 		public bool ReadUInt32(out UInt32 result)
 		{
 			if (m_bitLength - m_readPosition < 32)
@@ -270,7 +265,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads an unsigned integer stored in 1 to 32 bits, written using Write(UInt32, Int32)
 		/// </summary>
-		[CLSCompliant(false)]
 		public UInt32 ReadUInt32(int numberOfBits)
 		{
 			UInt32 retval = PeekUInt32(numberOfBits);
@@ -281,7 +275,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads a 64 bit unsigned integer written using Write(UInt64)
 		/// </summary>
-		[CLSCompliant(false)]
 		public UInt64 ReadUInt64()
 		{
 			ulong retval = PeekUInt64();
@@ -307,7 +300,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads an unsigned integer stored in 1 to 64 bits, written using Write(UInt64, Int32)
 		/// </summary>
-		[CLSCompliant(false)]
 		public UInt64 ReadUInt64(int numberOfBits)
 		{
 			ulong retval = PeekUInt64(numberOfBits);
@@ -390,7 +382,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads a variable sized UInt32 written using WriteVariableUInt32()
 		/// </summary>
-		[CLSCompliant(false)]
 		public uint ReadVariableUInt32()
 		{
 			int num1 = 0;
@@ -411,7 +402,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads a variable sized UInt32 written using WriteVariableUInt32() and returns true for success
 		/// </summary>
-		[CLSCompliant(false)]
 		public bool ReadVariableUInt32(out uint result)
 		{
 			int num1 = 0;
@@ -457,7 +447,6 @@ namespace Lidgren.Network
 		/// <summary>
 		/// Reads a variable sized UInt32 written using WriteVariableInt64()
 		/// </summary>
-		[CLSCompliant(false)]
 		public UInt64 ReadVariableUInt64()
 		{
 			UInt64 num1 = 0;
@@ -573,7 +562,7 @@ namespace Lidgren.Network
 			if ((m_readPosition & 7) == 0)
 			{
 				// read directly
-				string retval = System.Text.Encoding.UTF8.GetString(m_data, m_readPosition >> 3, byteLen);
+				string retval = Encoding.UTF8.GetString(m_data, m_readPosition >> 3, byteLen);
 				m_readPosition += (8 * byteLen);
 				return retval;
 			}
@@ -615,7 +604,7 @@ namespace Lidgren.Network
 			if ((m_readPosition & 7) == 0)
 			{
 				// read directly
-				result = System.Text.Encoding.UTF8.GetString(m_data, m_readPosition >> 3, (int)byteLen);
+				result = Encoding.UTF8.GetString(m_data, m_readPosition >> 3, (int)byteLen);
 				m_readPosition += (8 * (int)byteLen);
 				return true;
 			}
@@ -641,7 +630,7 @@ namespace Lidgren.Network
 				return false;
 			}
 
-			result = System.Text.Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+			result = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 			return true;
 		}
 

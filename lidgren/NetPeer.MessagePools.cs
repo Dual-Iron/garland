@@ -233,7 +233,7 @@ namespace Lidgren.Network
 				return retval;
 			}
 
-			int numBytes = System.Text.Encoding.UTF8.GetByteCount(text);
+			int numBytes = Encoding.UTF8.GetByteCount(text);
 			retval = CreateIncomingMessage(tp, numBytes + (numBytes > 127 ? 2 : 1));
 			retval.Write(text);
 

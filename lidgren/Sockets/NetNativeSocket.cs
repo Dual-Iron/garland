@@ -2,21 +2,29 @@ using System;
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 
+
 namespace Lidgren.Network
 {
-	internal static unsafe class NetNativeSocket
+	internal static unsafe partial class NetNativeSocket
 	{
+#if NET7_0_OR_GREATER
 		internal static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 		internal static readonly bool IsLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+#else
+        internal static readonly bool IsWindows = (int)Environment.OSVersion.Platform < 4;
+        internal static readonly bool IsLinux = !IsWindows;
+#endif
 
 #pragma warning disable 649
-		// ReSharper disable InconsistentNaming
-		// ReSharper disable IdentifierTypo
-		// ReSharper disable StringLiteralTypo
+        // ReSharper disable InconsistentNaming
+        // ReSharper disable IdentifierTypo
+        // ReSharper disable StringLiteralTypo
 
-		internal static readonly ushort AF_INET = 2;
-		internal static readonly ushort AF_INET6 = (ushort) (IsWindows ? 23 : 10);
-		
+        internal static readonly ushort AF_INET = 2;
+		internal static readonly ushort AF_INET6 = (ushort)(IsWindows ? 23 : 10);
+
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
+#pragma warning disable IDE1006 // Naming Styles
 		internal struct sockaddr
 		{
 			public ushort sa_family;
@@ -70,9 +78,15 @@ namespace Lidgren.Network
 				? BinaryPrimitives.ReverseEndianness(netlong)
 				: netlong;
 
-		[DllImport("libc", EntryPoint = "sendto")]
-		internal static extern IntPtr sendto_linux(
-			int sockfd,
+#if NET7_0_OR_GREATER
+		[LibraryImportAttribute("libc", EntryPoint = "sendto")]
+		internal static partial IntPtr sendto_linux(
+#else
+        [DllImport("libc", EntryPoint = "sendto")]
+        internal static extern IntPtr sendto_linux(
+#endif
+
+            int sockfd,
 			void* buf,
 			IntPtr len,
 			int flags,
@@ -106,7 +120,6 @@ namespace Lidgren.Network
 			sockaddr* from,
 			int* fromlen);
 
-		
 		[DllImport("Ws2_32.dll")]
 		internal static extern int WSAGetLastError();
 		// ReSharper restore InconsistentNaming

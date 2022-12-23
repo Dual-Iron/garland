@@ -10,7 +10,8 @@ namespace Lidgren.Network
 		private static int IP(byte a, byte b, byte c, byte d) => (a << 24) | (b << 16) | (c << 8) | d;
 
 		// From miniupnpc
-		public static readonly (int ip, int mask)[] ReservedRanges =
+		// (ip, mask)
+		public static readonly (int, int)[] ReservedRanges =
 		{
 			// @formatter:off
 			(IP(0,   0,   0,   0), 8 ), // RFC1122 "This host on this network"

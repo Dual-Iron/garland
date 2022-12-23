@@ -6,7 +6,6 @@ using NetAddress = System.Net.IPAddress;
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace Lidgren.Network
 {
@@ -125,47 +124,6 @@ namespace Lidgren.Network
                     throw;
                 }
             }
-        }
-
-        public static async Task<NetEndPoint> ResolveAsync(string ipOrHost, int port)
-        {
-            return await ResolveAsync(ipOrHost, port, (AddressFamily?) null);
-        }
-
-        public static async Task<NetEndPoint> ResolveAsync(string ipOrHost, int port, AddressFamily? allowedFamily)
-        {
-            var adr = await ResolveAsync(ipOrHost, allowedFamily);
-            return adr == null ? null : new NetEndPoint(adr, port);
-        }
-
-        public static async Task<NetAddress> ResolveAsync(string ipOrHost, AddressFamily? allowedFamily = null)
-        {
-            if (ResolveHead(ref ipOrHost, allowedFamily, out var resolve))
-            {
-                return resolve;
-            }
-
-            // ok must be a host name
-            try
-            {
-                var addresses = await Dns.GetHostAddressesAsync(ipOrHost);
-                if (addresses == null)
-                    return null;
-                return ResolveFilter(allowedFamily, addresses);
-            }
-            catch (SocketException ex)
-            {
-                if (ex.SocketErrorCode == SocketError.HostNotFound)
-                {
-                    //LogWrite(string.Format(CultureInfo.InvariantCulture, "Failed to resolve host '{0}'.", ipOrHost));
-                    return null;
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
         }
 
         /// <summary>
