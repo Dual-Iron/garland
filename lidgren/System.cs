@@ -30,8 +30,7 @@ namespace System
     /// <typeparam name="T2">The type of the tuple's second component.</typeparam>
     [Serializable]
     [StructLayout(LayoutKind.Auto)]
-    public struct ValueTuple<T1, T2>
-        : IEquatable<ValueTuple<T1, T2>>, IComparable, IComparable<ValueTuple<T1, T2>>
+    public struct ValueTuple<T1, T2> : IEquatable<ValueTuple<T1, T2>>, IComparable, IComparable<ValueTuple<T1, T2>>
     {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2}"/> instance's first component.
@@ -201,14 +200,15 @@ namespace System
         }
 
         public static implicit operator Span<T>(T[] array) => array.AsSpan();
+        public static implicit operator ReadOnlySpan<T>(Span<T> span) => new(span.ptr, span.len);
     }
 
     public unsafe readonly ref struct ReadOnlySpan<T>
     {
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
-        internal ReadOnlySpan(T* ptr, int len)
+        internal ReadOnlySpan(void* ptr, int len)
         {
-            this.ptr = ptr;
+            this.ptr = (T*)ptr;
             this.len = len;
         }
 
@@ -269,7 +269,6 @@ namespace System
             return array;
         }
 
-        public static implicit operator ReadOnlySpan<T>(Span<T> span) => new(span.Pointer, span.Length);
         public static implicit operator ReadOnlySpan<T>(T[] array) => array.AsSpan();
     }
 
@@ -277,11 +276,13 @@ namespace System
     {
         public static Span<T> AsSpan<T>(this T[] array)
         {
+            Span<T> result;
             unsafe {
                 fixed (T* ptr = array) {
-                    return new(ptr, array.Length);
+                    result = new Span<T>(ptr, array.Length);
                 }
             }
+            return result;
         }
         public static Span<T> AsSpan<T>(this T[] array, int start) => array.AsSpan().Slice(start);
         public static Span<T> AsSpan<T>(this T[] array, int start, int length) => array.AsSpan().Slice(start, length);
