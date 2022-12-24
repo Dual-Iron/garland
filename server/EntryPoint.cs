@@ -18,7 +18,7 @@ listener.ConnectionRequestEvent += request => {
 };
 
 listener.PeerConnectedEvent += peer => {
-    Console.WriteLine($"We got connection: {peer.EndPoint}"); // Show peer ip
+    Console.WriteLine($"Connection: {peer.EndPoint}"); // Show peer ip
     NetDataWriter writer = new();                 // Create writer class
     writer.Put("Hello client!");                                // Put some string
     peer.Send(writer, DeliveryMethod.ReliableOrdered);             // Send with reliability

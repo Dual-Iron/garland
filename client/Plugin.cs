@@ -18,16 +18,6 @@ sealed class Plugin : BaseUnityPlugin
     {
         Logger = base.Logger;
 
-        EventBasedNetListener listener = new();
-        client = new(listener);
-        client.Start();
-        client.Connect("localhost", Variables.Port, Variables.ConnectionKey);
-        listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod) =>
-        {
-            Console.WriteLine($"We got: {dataReader.GetString(100)}");
-            dataReader.Recycle();
-        };
-
         try {
             On.RainWorld.Update += RainWorld_Update;
         }
@@ -41,7 +31,23 @@ sealed class Plugin : BaseUnityPlugin
         orig(self);
 
         try {
-            client.PollEvents();
+            if (client == null) {
+                EventBasedNetListener listener = new();
+                client = new(listener);
+                client.Start();
+                client.Connect("localhost", Variables.Port, Variables.ConnectionKey);
+
+                listener.PeerConnectedEvent += p => {
+                    Logger.LogDebug("Connected");
+                };
+                listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod) => {
+                    Logger.LogDebug($"Received \"{dataReader.GetString(100)}\"");
+                    dataReader.Recycle();
+                };
+            }
+            else {
+                client.PollEvents();
+            }
         }
         catch (Exception e) {
             Logger.LogError(e);

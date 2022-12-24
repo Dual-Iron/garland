@@ -2,10 +2,11 @@
 using System.Reflection;
 using System.Collections.Generic;
 using System.Net;
-using System.Runtime.Serialization;
 
 namespace LiteNetLib.Utils
 {
+    public sealed class IgnoreMemberAttribute : Attribute { }
+
     public class InvalidTypeException : ArgumentException
     {
         public InvalidTypeException(string message) : base(message) { }
@@ -602,7 +603,7 @@ namespace LiteNetLib.Utils
                     callType = CallType.List;
                 }
                 
-                if (Attribute.IsDefined(property, typeof(IgnoreDataMemberAttribute)))
+                if (Attribute.IsDefined(property, typeof(IgnoreMemberAttribute)))
                     continue;
 
                 var getMethod = property.GetGetMethod();
