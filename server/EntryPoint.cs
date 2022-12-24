@@ -4,6 +4,8 @@ using LiteNetLib.Utils;
 using System;
 using System.Threading;
 
+UpnpHelp.Upnp.Open(Variables.Port);
+
 EventBasedNetListener listener = new();
 NetManager server = new(listener) { AutoRecycle = true };
 server.Start(Variables.Port);

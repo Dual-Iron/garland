@@ -44,6 +44,8 @@ sealed class Plugin : BaseUnityPlugin
                     DateTime now = DateTime.UtcNow;
                     Logger.LogDebug($"Received \"{dataReader.GetString(100)}\" at {now:HH:mm:ss}.{now.Millisecond:D3}");
                 };
+
+                Logger.LogDebug("Attempting to connect");
             }
             else {
                 client.PollEvents();
