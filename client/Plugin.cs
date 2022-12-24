@@ -1,8 +1,9 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using Common;
-using Lidgren.Network;
+using LiteNetLib;
 using System;
+using System.Threading;
 
 namespace Client;
 
@@ -11,9 +12,21 @@ sealed class Plugin : BaseUnityPlugin
 {
     public static new ManualLogSource Logger { get; private set; }
 
+    static NetManager client;
+
     public void OnEnable()
     {
         Logger = base.Logger;
+
+        EventBasedNetListener listener = new();
+        client = new(listener);
+        client.Start();
+        client.Connect("localhost", Variables.Port, Variables.ConnectionKey);
+        listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod) =>
+        {
+            Console.WriteLine($"We got: {dataReader.GetString(100)}");
+            dataReader.Recycle();
+        };
 
         try {
             On.RainWorld.Update += RainWorld_Update;
@@ -28,54 +41,10 @@ sealed class Plugin : BaseUnityPlugin
         orig(self);
 
         try {
-            UpdateNetwork(self);
+            client.PollEvents();
         }
         catch (Exception e) {
             Logger.LogError(e);
-        }
-    }
-
-    static bool init = true;
-    static NetClient client;
-
-    private void UpdateNetwork(RainWorld self)
-    {
-        if (init) {
-            init = false;
-            client = new(new NetPeerConfiguration("Garland!"));
-
-            client.Start();
-            client.Connect("localhost", Variables.Port, client.CreateMessage("<3"));
-        }
-
-        while (client.ReadMessage(out NetIncomingMessage message)) {
-            switch (message.MessageType) {
-                case NetIncomingMessageType.DebugMessage:
-                case NetIncomingMessageType.VerboseDebugMessage:
-                    Logger.LogDebug(message.ReadString());
-                    break;
-
-                case NetIncomingMessageType.WarningMessage:
-                    Logger.LogWarning(message.ReadString());
-                    break;
-
-                case NetIncomingMessageType.ErrorMessage:
-                    Logger.LogError(message.ReadString());
-                    break;
-
-                case NetIncomingMessageType.StatusChanged:
-                    NetConnectionStatus status = (NetConnectionStatus)message.ReadByte();
-
-                    string reason = message.ReadString();
-
-                    if (status == NetConnectionStatus.Connected) {
-                        Console.WriteLine($"Connected to server!! {status}: {reason}");
-                    }
-                    else {
-                        Console.WriteLine($"Oops. {status}: {reason}");
-                    }
-                    break;
-            }
         }
     }
 }

@@ -1,58 +1,32 @@
 ﻿using Common;
-using Lidgren.Network;
+using LiteNetLib;
+using LiteNetLib.Utils;
 using System;
-using System.Net;
+using System.Threading;
 
-NetServer server = new(new NetPeerConfiguration("Garland!") {
-    Port = Variables.Port,
-    LocalAddress = IPAddress.IPv6Any,
-    DualStack = true,
-    EnableUPnP = true,
-});
-
-server.Start();
+EventBasedNetListener listener = new();
+NetManager server = new(listener);
+server.Start(Variables.Port);
 
 Console.WriteLine("Listening for messages.");
 
-static void WriteLineColored(ConsoleColor color, string message)
-{
-    ConsoleColor precolor = Console.ForegroundColor;
-    Console.ForegroundColor = color;
-    Console.WriteLine(message);
-    Console.ForegroundColor = precolor;
+listener.ConnectionRequestEvent += request => {
+    if (server.ConnectedPeersCount < Variables.MaxConnections)
+        request.AcceptIfKey(Variables.ConnectionKey);
+    else
+        request.Reject();
+};
+
+listener.PeerConnectedEvent += peer => {
+    Console.WriteLine($"We got connection: {peer.EndPoint}"); // Show peer ip
+    NetDataWriter writer = new();                 // Create writer class
+    writer.Put("Hello client!");                                // Put some string
+    peer.Send(writer, DeliveryMethod.ReliableOrdered);             // Send with reliability
+};
+
+while (!Console.KeyAvailable) {
+    server.PollEvents();
+    Thread.Sleep(15);
 }
 
-while (true) {
-    while (server.ReadMessage(out NetIncomingMessage message)) {
-        switch (message.MessageType) {
-            case NetIncomingMessageType.DebugMessage:
-            case NetIncomingMessageType.VerboseDebugMessage:
-                WriteLineColored(ConsoleColor.DarkGray, message.ReadString());
-                break;
-
-            case NetIncomingMessageType.WarningMessage:
-                WriteLineColored(ConsoleColor.Yellow, message.ReadString());
-                break;
-
-            case NetIncomingMessageType.ErrorMessage:
-                WriteLineColored(ConsoleColor.Red, message.ReadString());
-                break;
-
-            case NetIncomingMessageType.StatusChanged:
-                NetConnectionStatus status = (NetConnectionStatus)message.ReadByte();
-
-                string reason = message.ReadString();
-
-                Console.WriteLine($"{NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier)} {status}: {reason}");
-
-                if (status == NetConnectionStatus.Connected) {
-                    Console.WriteLine($"Hello {message.SenderEndPoint}! Remote hail: {message.SenderConnection.RemoteHailMessage.ReadString()}");
-                }
-                if (status == NetConnectionStatus.Disconnected) {
-                    Console.WriteLine($"Bye {message.SenderEndPoint}.");
-                }
-                break;
-        }
-    }
-    System.Threading.Thread.Sleep(1);
-}
+server.Stop();
