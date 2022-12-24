@@ -7,7 +7,4 @@
     <IncludeSymbols>true</IncludeSymbols>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' != 'net7.0' ">
-    <PackageReference Include="Rackspace.HttpClient35" Version="1.0.0-beta003" />
-  </ItemGroup>
 </Project>

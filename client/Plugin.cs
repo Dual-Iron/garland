@@ -43,6 +43,7 @@ sealed class Plugin : BaseUnityPlugin
         if (init) {
             init = false;
             client = new(new NetPeerConfiguration("Garland!"));
+
             client.Start();
             client.Connect("localhost", Variables.Port, client.CreateMessage("<3"));
         }

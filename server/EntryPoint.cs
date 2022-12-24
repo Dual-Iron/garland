@@ -14,20 +14,28 @@ server.Start();
 
 Console.WriteLine("Listening for messages.");
 
+static void WriteLineColored(ConsoleColor color, string message)
+{
+    ConsoleColor precolor = Console.ForegroundColor;
+    Console.ForegroundColor = color;
+    Console.WriteLine(message);
+    Console.ForegroundColor = precolor;
+}
+
 while (true) {
     while (server.ReadMessage(out NetIncomingMessage message)) {
         switch (message.MessageType) {
             case NetIncomingMessageType.DebugMessage:
-            case NetIncomingMessageType.WarningMessage:
             case NetIncomingMessageType.VerboseDebugMessage:
-                Console.WriteLine(message.ReadString());
+                WriteLineColored(ConsoleColor.DarkGray, message.ReadString());
+                break;
+
+            case NetIncomingMessageType.WarningMessage:
+                WriteLineColored(ConsoleColor.Yellow, message.ReadString());
                 break;
 
             case NetIncomingMessageType.ErrorMessage:
-                ConsoleColor color = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Error.WriteLine(message.ReadString());
-                Console.ForegroundColor = color;
+                WriteLineColored(ConsoleColor.Red, message.ReadString());
                 break;
 
             case NetIncomingMessageType.StatusChanged:
