@@ -214,7 +214,9 @@ namespace Lidgren.Network
 				}
 
 				item = m_items[m_head];
+#if NET7_0_OR_GREATER
 				if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+#endif
                 {
                     m_items[m_head] = default(T);
                 }
@@ -256,7 +258,9 @@ namespace Lidgren.Network
 					var item = m_items[m_head];
 					addTo.Add(item);
 
+#if NET7_0_OR_GREATER
 					if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+#endif
 					{
 						m_items[m_head] = default(T);
 					}
@@ -353,9 +357,10 @@ namespace Lidgren.Network
 		public void Clear()
 		{
 			m_lock.EnterWriteLock();
-			try
-			{
+			try {
+#if NET7_0_OR_GREATER
 				if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+#endif
 				{
 					for (int i = 0; i < m_items.Length; i++)
 						m_items[i] = default(T);
@@ -363,8 +368,7 @@ namespace Lidgren.Network
 				m_head = 0;
 				m_size = 0;
 			}
-			finally
-			{
+			finally {
 				m_lock.ExitWriteLock();
 			}
 		}

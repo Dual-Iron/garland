@@ -370,11 +370,11 @@ namespace Lidgren.Network
 			response.EnsureSuccessStatusCode();
 			xmlDoc.Load(response.Content.ReadAsStream());
 #else
-			System.Threading.Tasks.Task.Run(async () =>
+			System.Threading.Tasks.Task.Factory.StartNew(() =>
 			{
-				using var response = await httpClient.SendAsync(request);
+				using var response = httpClient.SendAsync(request).Result;
 				response.EnsureSuccessStatusCode();
-				xmlDoc.Load(await response.Content.ReadAsStreamAsync());
+				xmlDoc.Load(response.Content.ReadAsStreamAsync().Result);
 			}).Wait();
 #endif
 			

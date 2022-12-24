@@ -109,7 +109,11 @@ namespace Lidgren.Network
 			}
 
 			int ret;
+#if NET7_0_OR_GREATER
 			fixed (byte* bufPtr = buffer)
+#else
+			var bufPtr = buffer.Pointer;
+#endif
 			{
 				if (IsWindows)
 				{
@@ -164,9 +168,13 @@ namespace Lidgren.Network
 			sockaddr_in6 address6;
 
 			int ret;
+#if NET7_0_OR_GREATER
 			fixed (byte* bufPtr = buffer)
-			{
-				if (IsWindows)
+#else
+            var bufPtr = buffer.Pointer;
+#endif
+            {
+                if (IsWindows)
 				{
 					var len = sizeof(sockaddr_in6);
 					ret = recvfrom_win32(

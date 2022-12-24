@@ -136,7 +136,7 @@ namespace Lidgren.Network
                 }
                 else
                 {
-                    m_socket.DualMode = true;
+					m_socket.SetDualMode(true);
                 }
             }
 
@@ -687,7 +687,7 @@ namespace Lidgren.Network
 								// such that we can "wire up" the scope ID once we get a reply.
 								var bytesHandshake = addressHandshake.GetAddressBytes();
 								var bytesSender = addressSender.GetAddressBytes();
-								if (!bytesHandshake.AsSpan().SequenceEqual(bytesSender))
+								if (!bytesHandshake.AsSpan().SequenceEqual(bytesSender.AsSpan()))
 									continue;
 							}
 

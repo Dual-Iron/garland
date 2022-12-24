@@ -174,9 +174,13 @@ namespace Lidgren.Network
 		public static unsafe explicit operator IPEndPoint(in NetSocketAddressV4 address)
 		{
 			var span = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in address).Address.Address[0], 4);
+#if NET7_0_OR_GREATER
 			return new IPEndPoint(new IPAddress(span), address.Port);
-		}
-	}
+#else
+            return new IPEndPoint(new IPAddress(span.Alloc()), address.Port);
+#endif
+        }
+    }
 
 	internal struct NetSocketAddressV6 : IEquatable<NetSocketAddressV6>
 	{
@@ -219,7 +223,11 @@ namespace Lidgren.Network
 		public static unsafe explicit operator IPEndPoint(in NetSocketAddressV6 address)
 		{
 			var span = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in address).Address.Address[0], 16);
+#if NET7_0_OR_GREATER
 			return new IPEndPoint(new IPAddress(span, address.ScopeId), address.Port);
-		}
-	}
+#else
+            return new IPEndPoint(new IPAddress(span.Alloc(), address.ScopeId), address.Port);
+#endif
+        }
+    }
 }

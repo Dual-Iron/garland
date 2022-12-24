@@ -122,7 +122,7 @@ namespace Lidgren.Network
 		public static int BitsToHoldUInt(uint value)
 		{
 #if NETCOREAPP
-			return Math.Max(32 - BitOperations.LeadingZeroCount(value), 1);
+			return Math.Max(32 - System.Numerics.BitOperations.LeadingZeroCount(value), 1);
 #else
 			int bits = 1;
 			while ((value >>= 1) != 0)
@@ -137,7 +137,7 @@ namespace Lidgren.Network
 		public static int BitsToHoldUInt64(ulong value)
 		{
 #if NETCOREAPP
-			return Math.Max(64 - BitOperations.LeadingZeroCount(value), 1);
+			return Math.Max(64 - System.Numerics.BitOperations.LeadingZeroCount(value), 1);
 #else
 			int bits = 1;
 			while ((value >>= 1) != 0)

@@ -547,11 +547,10 @@ namespace Lidgren.Network
 			if (byteLen <= 0)
 				return String.Empty;
 
-			if ((ulong)(m_bitLength - m_readPosition) < ((ulong)byteLen * 8))
-			{
+			if ((ulong)(m_bitLength - m_readPosition) < ((ulong)byteLen * 8)) {
 				// not enough data
 #if DEBUG
-				
+
 				throw new NetException(c_readOverflowError);
 #else
 				m_readPosition = m_bitLength;
@@ -559,22 +558,22 @@ namespace Lidgren.Network
 #endif
 			}
 
-			if ((m_readPosition & 7) == 0)
-			{
+			if ((m_readPosition & 7) == 0) {
 				// read directly
 				string retval = Encoding.UTF8.GetString(m_data, m_readPosition >> 3, byteLen);
 				m_readPosition += (8 * byteLen);
 				return retval;
 			}
 
-			if (byteLen <= c_stackallocThresh)
-			{
+#if NET7_0_OR_GREATER
+            if (byteLen <= c_stackallocThresh) {
 				var buffer = ReadBytes(stackalloc byte[byteLen]);
 				return Encoding.UTF8.GetString(buffer);
-			} else {
-				byte[] bytes = ReadBytes(byteLen);
-				return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 			}
+#endif
+
+			byte[] bytes = ReadBytes(byteLen);
+			return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 		}
 
 		/// <summary>
@@ -609,7 +608,8 @@ namespace Lidgren.Network
 				return true;
 			}
 
-			if (byteLen < c_stackallocThresh)
+#if NET7_0_OR_GREATER
+            if (byteLen < c_stackallocThresh)
 			{
 				Span<byte> spanBytes = stackalloc byte[(int)byteLen];
 
@@ -622,6 +622,7 @@ namespace Lidgren.Network
 				result = String.Empty;
 				return false;
 			}
+#endif
 
 			byte[] bytes;
 			if (ReadBytes((int)byteLen, out bytes) == false)

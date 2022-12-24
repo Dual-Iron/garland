@@ -11,6 +11,18 @@ using System.Text;
 #if !NET7_0_OR_GREATER
 namespace System
 {
+    public static class HashCode
+    {
+        public static int Combine(object one, object two)
+        {
+            return unchecked((two.GetHashCode() * (int)0xA5555529) + one.GetHashCode());
+        }
+        public static int Combine(object one, object two, object three)
+        {
+            return Combine(Combine(one, two), three);
+        }
+    }
+
     /// <summary>
     /// Represents a 2-tuple, or pair, as a value type.
     /// </summary>
@@ -103,23 +115,13 @@ namespace System
             return Comparer<T2>.Default.Compare(Item2, other.Item2);
         }
 
-        static int Combine(int newKey, int currentKey)
-        {
-            return unchecked((currentKey * (int)0xA5555529) + newKey);
-        }
-
         /// <summary>
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
         public override int GetHashCode()
         {
-            return Combine(Item1?.GetHashCode() ?? 0, Item2?.GetHashCode() ?? 0);
-        }
-
-        private int GetHashCodeCore(IEqualityComparer comparer)
-        {
-            return Combine(comparer.GetHashCode(Item1), comparer.GetHashCode(Item2));
+            return HashCode.Combine(Item1?.GetHashCode() ?? 0, Item2?.GetHashCode() ?? 0);
         }
 
         /// <summary>
@@ -138,12 +140,12 @@ namespace System
         }
     }
 
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
     public unsafe readonly ref struct Span<T>
     {
-#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
-        internal Span(T* ptr, int len)
+        internal Span(void* ptr, int len)
         {
-            this.ptr = ptr;
+            this.ptr = (T*)ptr;
             this.len = len;
         }
 
@@ -179,6 +181,8 @@ namespace System
             if (start + length >= len) throw new IndexOutOfRangeException($"start + length is {start} but the len is {len}");
             return new(ptr + start, length);
         }
+
+        public bool SequenceEqual(ReadOnlySpan<T> other) => ((ReadOnlySpan<T>)this).SequenceEqual(other);
 
         public void CopyTo(Span<T> destination)
         {
@@ -245,6 +249,26 @@ namespace System
             }
         }
 
+        public bool SequenceEqual(ReadOnlySpan<T> other)
+        {
+            if (len != other.len) return false;
+            for (int i = 0; i < len; i++) {
+                if (!Equals(ptr[i], other.ptr[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public T[] Alloc()
+        {
+            T[] array = new T[len];
+            for (int i = 0; i < len; i++) {
+                array[i] = ptr[i];
+            }
+            return array;
+        }
+
         public static implicit operator ReadOnlySpan<T>(Span<T> span) => new(span.Pointer, span.Length);
         public static implicit operator ReadOnlySpan<T>(T[] array) => array.AsSpan();
     }
@@ -277,6 +301,70 @@ namespace System
             public static short ReverseEndianness(short value) => (short)ReverseEndianness((ushort)value);
             public static int ReverseEndianness(int value) => (int)ReverseEndianness((uint)value);
             public static long ReverseEndianness(long value) => (long)ReverseEndianness((ulong)value);
+
+            public static int ReadInt32BigEndian(ReadOnlySpan<byte> source)
+            {
+                int result = MemoryMarshal.Read<int>(source);
+                if (BitConverter.IsLittleEndian) {
+                    result = ReverseEndianness(result);
+                }
+                return result;
+            }
+        }
+    }
+
+    namespace Runtime.CompilerServices
+    {
+        public static class Unsafe
+        {
+            public static ref TTo As<TFrom, TTo>(ref TFrom source)
+            {
+                unsafe {
+                    fixed (TFrom* ptr = &source) {
+                        return ref *(TTo*)ptr;
+                    }
+                }
+            }
+
+            public static ref T AsRef<T>(scoped in T source)
+            {
+                unsafe {
+                    fixed (T* ptr = &source) {
+                        return ref *ptr;
+                    }
+                }
+            }
+        }
+    }
+
+    namespace Runtime.InteropServices
+    {
+        public static class MemoryMarshal
+        {
+            public static T Read<T>(ReadOnlySpan<byte> source) where T : struct
+            {
+                unsafe {
+                    return *(T*)source.Pointer;
+                }
+            }
+
+            public static ReadOnlySpan<T> CreateReadOnlySpan<T>(scoped ref T reference, int length)
+            {
+                unsafe {
+                    fixed (T* ptr = &reference) {
+                        return new(ptr, length);
+                    }
+                }
+            }
+
+            public static Span<T> CreateSpan<T>(scoped ref T reference, int length)
+            {
+                unsafe {
+                    fixed (T* ptr = &reference) {
+                        return new(ptr, length);
+                    }
+                }
+            }
         }
     }
 }
@@ -286,6 +374,7 @@ namespace System
 {
     internal static class Ext
     {
+#if !NET7_0_OR_GREATER
         public unsafe static int ToInt32(this ReadOnlySpan<byte> value)
         {
             if (8 > value.Length) throw new ArgumentException("span length");
@@ -303,15 +392,42 @@ namespace System
         public unsafe static float ToSingle(this ReadOnlySpan<byte> value)
         {
             int num = ToInt32(value);
-            return *(float*)(&num);
+            return *(float*)&num;
         }
 
         public unsafe static double ToDouble(this ReadOnlySpan<byte> value)
         {
             long num = ToInt64(value);
-            return *(double*)(&num);
+            return *(double*)&num;
         }
 
+        public unsafe static int SingleToInt32Bits(float value)
+        {
+            return *(int*)&value;
+        }
+#else
+        public static float ToSingle(this ReadOnlySpan<byte> value) => BitConverter.ToSingle(value);
+        public static double ToDouble(this ReadOnlySpan<byte> value) => BitConverter.ToDouble(value);
+        public unsafe static int SingleToInt32Bits(float value) => BitConverter.SingleToInt32Bits(value);
+#endif
+
+        public static bool GetDualMode(this Socket socket)
+        {
+            if (socket.AddressFamily != AddressFamily.InterNetworkV6) {
+                throw new NotSupportedException("AddressFamily must be InterNetworkV6 to get Dual Mode.");
+            }
+            return (int)socket.GetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)27 /*IPv6Only*/) == 0;
+        }
+
+        public static void SetDualMode(this Socket socket, bool value)
+        {
+            if (socket.AddressFamily != AddressFamily.InterNetworkV6) {
+                throw new NotSupportedException("AddressFamily must be InterNetworkV6 to set Dual Mode.");
+            }
+            socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)27 /*IPv6Only*/, value ? 0 : 1);
+        }
+
+#if !NET7_0_OR_GREATER
         public static IPAddress MapToIPv6(this IPAddress self)
         {
             if (self.AddressFamily == AddressFamily.InterNetworkV6) {
@@ -358,5 +474,47 @@ namespace System
 
             return new IPAddress(address);
         }
+
+        public static bool TryWriteBytes(this IPAddress ip, Span<byte> destination, out int bytesWritten)
+        {
+            byte[] bytes = ip.GetAddressBytes();
+
+            if (destination.Length < bytes.Length) {
+                for (int i = 0; i < destination.Length; i++) {
+                    destination[i] = bytes[i];
+                }
+                bytesWritten = destination.Length;
+                return false;
+            }
+
+            for (int i = 0; i < bytes.Length; i++) {
+                destination[i] = bytes[i];
+            }
+            bytesWritten = bytes.Length;
+            return true;
+        }
+
+        public static bool SequenceEqual<T>(this IEnumerable<T> first, IEnumerable<T> second)
+        {
+            IEnumerator<T> firstE = first.GetEnumerator();
+            IEnumerator<T> secondE = second.GetEnumerator();
+
+            while (firstE.MoveNext()) {
+                // If second is shorter than first, they're not equal.
+                if (!secondE.MoveNext()) {
+                    return false;
+                }
+                // If second has elements not equal to first, they're not equal.
+                if (!Equals(firstE, secondE)) {
+                    return false;
+                }
+            }
+            // If second is longer than first, they're not equal.
+            if (secondE.MoveNext()) {
+                return false;
+            }
+            return true;
+        }
+#endif
     }
 }

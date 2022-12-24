@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net35</TargetFrameworks>
-    <LangVersion>9.0</LangVersion>
+    <TargetFrameworks>net35;net7.0</TargetFrameworks>
+    <LangVersion>11</LangVersion>
     <Version>0.2.3</Version>
     <AssemblyName>SpaceWizards.Lidgren.Network</AssemblyName>
     <IncludeSymbols>true</IncludeSymbols>

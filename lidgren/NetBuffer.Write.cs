@@ -380,7 +380,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public void Write(float source)
 		{
-			int val = BitConverter.SingleToInt32Bits(source);
+			int val = Ext.SingleToInt32Bits(source);
 
 			if (!BitConverter.IsLittleEndian)
 			{
@@ -549,7 +549,8 @@ namespace Lidgren.Network
 				return;
 			}
 
-			var byteCount = Encoding.UTF8.GetByteCount(source);
+#if NET7_0_OR_GREATER
+            var byteCount = Encoding.UTF8.GetByteCount(source);
 			if (byteCount < c_stackallocThresh)
 			{
 				Span<byte> byteSpan = stackalloc byte[byteCount];
@@ -558,6 +559,7 @@ namespace Lidgren.Network
 				Write(byteSpan);
 				return;
 			}
+#endif
 
 			byte[] bytes = Encoding.UTF8.GetBytes(source);
 			EnsureBufferSize(m_bitLength + 8 + (bytes.Length * 8));

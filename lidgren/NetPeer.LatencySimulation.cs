@@ -221,7 +221,7 @@ namespace Lidgren.Network
 				// NOTE: Socket.DontFragment doesn't work on dual-stack sockets.
 				// The equivalent SetSocketOption does work.
 				// See: https://github.com/dotnet/runtime/issues/76410
-				if (m_socket.DualMode || target.AddressFamily == AddressFamily.InterNetwork)
+				if (m_socket.GetDualMode() || target.AddressFamily == AddressFamily.InterNetwork)
 					m_socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, true);
 				
 				int bytesSent = NetFastSocket.SendTo(m_socket, m_sendBuffer, 0, numBytes, SocketFlags.None, target);
@@ -250,7 +250,7 @@ namespace Lidgren.Network
 			}
 			finally
 			{
-				if (m_socket.DualMode || target.AddressFamily == AddressFamily.InterNetwork)
+				if (m_socket.GetDualMode() || target.AddressFamily == AddressFamily.InterNetwork)
 					m_socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, false);
 			}
 			return true;

@@ -235,13 +235,20 @@ namespace Lidgren.Network
 			// Nada
 		}
 
+#if NET7_0_OR_GREATER
+		static void Fill(Span<byte> bytes) => RandomNumberGenerator.Fill(bytes);
+#else
+        static readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
+		static void Fill(byte[] bytes) => rng.GetBytes(bytes);
+#endif
+
 		/// <summary>
 		/// Generates a random value from UInt32.MinValue to UInt32.MaxValue, inclusively
 		/// </summary>
 		public override uint NextUInt32()
 		{
 			var bytes = new byte[4];
-			RandomNumberGenerator.Fill(bytes);
+			Fill(bytes);
 			return (uint)bytes[0] | (((uint)bytes[1]) << 8) | (((uint)bytes[2]) << 16) | (((uint)bytes[3]) << 24);
 		}
 
@@ -250,7 +257,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public override void NextBytes(byte[] buffer)
 		{
-			RandomNumberGenerator.Fill(buffer);
+			Fill(buffer);
 		}
 
 		/// <summary>
@@ -258,7 +265,13 @@ namespace Lidgren.Network
 		/// </summary>
 		public override void NextBytes(byte[] buffer, int offset, int length)
 		{
-			RandomNumberGenerator.Fill(buffer.AsSpan(offset, length));
+#if NET7_0_OR_GREATER
+			Fill(buffer.AsSpan(offset, length));
+#else
+			byte[] buf = new byte[length];
+			Fill(buf);
+			Array.Copy(buf, 0, buffer, offset, length);
+#endif
 		}
 	}
 }
