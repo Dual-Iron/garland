@@ -5,7 +5,7 @@ using System;
 using System.Threading;
 
 EventBasedNetListener listener = new();
-NetManager server = new(listener);
+NetManager server = new(listener) { AutoRecycle = true };
 server.Start(Variables.Port);
 
 Console.WriteLine("Listening for messages.");
@@ -18,10 +18,12 @@ listener.ConnectionRequestEvent += request => {
 };
 
 listener.PeerConnectedEvent += peer => {
-    Console.WriteLine($"Connection: {peer.EndPoint}"); // Show peer ip
-    NetDataWriter writer = new();                 // Create writer class
-    writer.Put("Hello client!");                                // Put some string
-    peer.Send(writer, DeliveryMethod.ReliableOrdered);             // Send with reliability
+    DateTime now = DateTime.UtcNow;
+    Console.WriteLine($"Connection: {peer.EndPoint} at {now:HH:mm:ss}.{now.Millisecond:D3}");
+
+    NetDataWriter writer = new();
+    writer.Put("Hello client!");
+    peer.Send(writer, DeliveryMethod.ReliableOrdered);
 };
 
 while (!Console.KeyAvailable) {

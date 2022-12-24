@@ -33,7 +33,7 @@ sealed class Plugin : BaseUnityPlugin
         try {
             if (client == null) {
                 EventBasedNetListener listener = new();
-                client = new(listener);
+                client = new(listener) { AutoRecycle = true };
                 client.Start();
                 client.Connect("localhost", Variables.Port, Variables.ConnectionKey);
 
@@ -41,8 +41,8 @@ sealed class Plugin : BaseUnityPlugin
                     Logger.LogDebug("Connected");
                 };
                 listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod) => {
-                    Logger.LogDebug($"Received \"{dataReader.GetString(100)}\"");
-                    dataReader.Recycle();
+                    DateTime now = DateTime.UtcNow;
+                    Logger.LogDebug($"Received \"{dataReader.GetString(100)}\" at {now:HH:mm:ss}.{now.Millisecond:D3}");
                 };
             }
             else {
