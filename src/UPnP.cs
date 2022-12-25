@@ -64,7 +64,7 @@ namespace UpnpHelp
 
             while (!finished) {
                 try {
-                    socket.ReceiveFrom(response, ref ep);
+                    socket.ReceiveFrom(response, ref ep); // <-- exception
                     var str = Encoding.UTF8.GetString(response);
                     var aSTR = str.Split('\n');
                     foreach (string i in aSTR) {

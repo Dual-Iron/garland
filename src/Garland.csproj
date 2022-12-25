@@ -6,10 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="../common/lib/*.refstub.dll" />
-    <Compile Include="../common/**/*.cs">
-      <Visible>true</Visible>
-    </Compile>
+    <Reference Include="../lib/*.refstub.dll" />
   </ItemGroup>
 
 </Project>
