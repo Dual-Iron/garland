@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using Common;
+using Garland;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
@@ -11,6 +12,8 @@ namespace Client;
 sealed class Plugin : BaseUnityPlugin
 {
     public static new ManualLogSource Logger { get; private set; }
+    public static ManualLogSource ClientLog { get; } = BepInEx.Logging.Logger.CreateLogSource("Client");
+    public static ManualLogSource ServerLog { get; } = BepInEx.Logging.Logger.CreateLogSource("Server");
 
     static NetManager client;
     static NetManager server;
@@ -35,12 +38,12 @@ sealed class Plugin : BaseUnityPlugin
             if (server == null) {
                 StartServer();
             }
-            else if (client == null) {
+            else if (client == null && Upnp.State == UpnpState.Finished) {
                 StartClient();
             }
             else {
-                server.PollEvents();
-                client.PollEvents();
+                server?.PollEvents();
+                client?.PollEvents();
             }
         }
         catch (Exception e) {
@@ -50,11 +53,13 @@ sealed class Plugin : BaseUnityPlugin
 
     private static void StartServer()
     {
+        Upnp.Open(Variables.Port);
+
         EventBasedNetListener listener = new();
         server = new(listener) { AutoRecycle = true };
         server.Start(Variables.Port);
 
-        Logger.LogDebug("Listening for messages");
+        ServerLog.LogDebug("Listening for messages");
 
         listener.ConnectionRequestEvent += request => {
             if (server.ConnectedPeersCount < Variables.MaxConnections)
@@ -65,7 +70,7 @@ sealed class Plugin : BaseUnityPlugin
 
         listener.PeerConnectedEvent += peer => {
             DateTime now = DateTime.UtcNow;
-            Console.WriteLine($"Connection: {peer.EndPoint} at {now:HH:mm:ss}.{now.Millisecond:D3}");
+            ServerLog.LogDebug($"Connection: {peer.EndPoint} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
             NetDataWriter writer = new();
             writer.Put("Hello client!");
@@ -80,14 +85,14 @@ sealed class Plugin : BaseUnityPlugin
         client.Start();
         client.Connect("localhost", Variables.Port, Variables.ConnectionKey);
 
-        Logger.LogDebug("Attempting to connect");
+        ClientLog.LogDebug("Connecting to server");
 
         listener.PeerConnectedEvent += p => {
-            Logger.LogDebug("Connected");
+            ClientLog.LogDebug("Connected");
         };
         listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod) => {
             DateTime now = DateTime.UtcNow;
-            Logger.LogDebug($"Received \"{dataReader.GetString(100)}\" at {now:HH:mm:ss}.{now.Millisecond:D3}");
+            ClientLog.LogDebug($"Received \"{dataReader.GetString(100)}\" at {now:HH:mm:ss}.{now.Millisecond:D3}");
         };
     }
 }
