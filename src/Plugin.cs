@@ -1,29 +1,28 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using Common;
-using Garland;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
 
-namespace Client;
+namespace Garland;
 
 [BepInPlugin("org.ozql.garland", "Garland", "0.1.0")]
-sealed class Plugin : BaseUnityPlugin
+sealed partial class Plugin : BaseUnityPlugin
 {
-    public static new ManualLogSource Logger { get; private set; }
+    public static new ManualLogSource Logger { get; private set; } = null!;
     public static ManualLogSource ClientLog { get; } = BepInEx.Logging.Logger.CreateLogSource("Client");
     public static ManualLogSource ServerLog { get; } = BepInEx.Logging.Logger.CreateLogSource("Server");
 
-    static NetManager client;
-    static NetManager server;
+    public static NetManager? client;
+    public static NetManager? server;
 
     public void OnEnable()
     {
         Logger = base.Logger;
 
         try {
-            On.RainWorld.Update += RainWorld_Update;
+            MenuHooks();
         }
         catch (Exception e) {
             Logger.LogError(e);
@@ -35,16 +34,8 @@ sealed class Plugin : BaseUnityPlugin
         orig(self);
 
         try {
-            if (server == null) {
-                StartServer();
-            }
-            else if (client == null && Upnp.State == UpnpState.Finished) {
-                StartClient();
-            }
-            else {
-                server?.PollEvents();
-                client?.PollEvents();
-            }
+            server?.PollEvents();
+            client?.PollEvents();
         }
         catch (Exception e) {
             Logger.LogError(e);

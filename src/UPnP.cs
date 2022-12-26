@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Text;
 using System;
-using Client;
+using Garland;
 
 namespace Garland;
 
