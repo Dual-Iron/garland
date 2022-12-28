@@ -22,6 +22,7 @@ sealed class OnlineMenu : Menu.Menu
         }));
 
         pages[0].subObjects.Add(new SimpleButton(this, pages[0], Translate("BACK"), "BACK", new Vector2(200f, 50f), new Vector2(110f, 30f)));
+        pages[0].subObjects.Add(new SimpleButton(this, pages[0], "HOST", "HOST", new Vector2(200f, 50f), new Vector2(110f, 30f)));
     }
 
     public override void Singal(MenuObject sender, string message)
@@ -29,6 +30,10 @@ sealed class OnlineMenu : Menu.Menu
         if (message == "BACK") {
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);
             PlaySound(SoundID.MENU_Switch_Page_Out);
+        }
+        else if (message == "HOST") {
+
+            PlaySound(SoundID.MENU_Start_New_Game);
         }
     }
 }

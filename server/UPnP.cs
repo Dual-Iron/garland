@@ -6,9 +6,8 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Text;
 using System;
-using Garland;
 
-namespace Garland;
+namespace Server;
 
 public enum UpnpState
 {
@@ -53,7 +52,7 @@ static public class Upnp
 
     static void Response()
     {
-        Plugin.ServerLog.LogDebug($"Started attempt to open port {Port}");
+        Plugin.Log.LogDebug($"Started attempt to open port {Port}");
 
         bool finished = false;
 
@@ -132,18 +131,18 @@ static public class Upnp
                 }
             }
             catch (Exception e) {
-                Plugin.ServerLog.LogError($"UPnP error: {e.Message}");
+                Plugin.Log.LogError($"UPnP error: {e.Message}");
             }
 
             if (++tries > 10) {
                 State = UpnpState.Error;
-                Plugin.ServerLog.LogDebug($"Ceased attempt to open port {Port}");
+                Plugin.Log.LogDebug($"Ceased attempt to open port {Port}");
                 return;
             }
         }
 
         State = UpnpState.Finished;
-        Plugin.ServerLog.LogDebug($"Successfully opened port {Port}");
+        Plugin.Log.LogDebug($"Successfully opened port {Port}");
     }
 
     static void GetMappings()

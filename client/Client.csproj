@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Reference Include="../lib/*.refstub.dll" />
+    <Compile Include="../lib/**/*.cs" />
   </ItemGroup>
 
 </Project>

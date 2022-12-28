@@ -4,7 +4,7 @@ using MonoMod.Cil;
 using System.Linq;
 using UnityEngine;
 
-namespace Garland;
+namespace Client;
 
 sealed partial class Plugin
 {
@@ -13,30 +13,24 @@ sealed partial class Plugin
 
     private static void MenuHooks()
     {
-        On.Menu.MainMenu.ctor += AddMultiplayerButtonToMainMenu;
+        On.Menu.MainMenu.ctor += ReplaceSingleplayerButton;
         On.Menu.MainMenu.Singal += MainMenu_Singal;
         IL.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
     }
 
-    private static void AddMultiplayerButtonToMainMenu(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
+    private static void ReplaceSingleplayerButton(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
     {
         orig(self, manager, showRegionSpecificBkg);
 
         foreach (var button in self.pages[0].subObjects.OfType<SimpleButton>()) {
-            var oldPos = button.pos;
-
-            button.pos.y += 40;
-
             if (button.signalText == "SINGLE PLAYER") {
-                var onlineButton = new SimpleButton(self, self.pages[0], "MULTI PLAYER", signal, oldPos, button.size);
-                onlineButton.nextSelectable[0] = onlineButton;
-                onlineButton.nextSelectable[2] = onlineButton;
-                self.pages[0].subObjects.Add(onlineButton);
+                button.signalText = signal;
+                button.menuLabel.text = "MULTI PLAYER";
                 return;
             }
         }
 
-        Logger.LogError("MULTI PLAYER button not added to main menu because SINGLE PLAYER button was missing!");
+        Log.LogError("Where is the singleplayer button???");
     }
 
     private static void MainMenu_Singal(On.Menu.MainMenu.orig_Singal orig, MainMenu self, MenuObject sender, string message)
