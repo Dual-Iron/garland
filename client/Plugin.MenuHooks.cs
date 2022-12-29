@@ -2,7 +2,6 @@
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using System.Linq;
-using UnityEngine;
 
 namespace Client;
 
@@ -22,15 +21,26 @@ sealed partial class Plugin
     {
         orig(self, manager, showRegionSpecificBkg);
 
+        MenuObject? add = null;
+
         foreach (var button in self.pages[0].subObjects.OfType<SimpleButton>()) {
-            if (button.signalText == "SINGLE PLAYER") {
-                button.signalText = signal;
-                button.menuLabel.text = "MULTI PLAYER";
-                return;
+            // Add MULTI PLAYER button at location of REGIONS button
+            if (add == null && button.signalText == "REGIONS") {
+                add = new SimpleButton(self, self.pages[0], "MULTI PLAYER", signal, button.pos, button.size);
+                add.nextSelectable[0] = add;
+                add.nextSelectable[2] = add;
+            }
+
+            // Move other buttons down
+            if (add != null) {
+                button.pos.y -= 40;
             }
         }
 
-        Log.LogError("Where is the singleplayer button???");
+        if (add != null)
+            self.pages[0].subObjects.Add(add);
+        else
+            Log.LogError("MULTI PLAYER button not added to main menu!");
     }
 
     private static void MainMenu_Singal(On.Menu.MainMenu.orig_Singal orig, MainMenu self, MenuObject sender, string message)
@@ -50,7 +60,7 @@ sealed partial class Plugin
 
         cursor.GotoNext(i => i.MatchSwitch(out _));
 
-        // TrySwitchToModMenu(this, ID);
+        // SwitchToCustomProcess(this, ID);
         cursor.Emit(OpCodes.Ldarg_0);
         cursor.Emit(OpCodes.Ldarg_1);
         cursor.EmitDelegate(SwitchToCustomProcess);

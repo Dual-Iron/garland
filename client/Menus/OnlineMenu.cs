@@ -1,6 +1,5 @@
 ﻿using Common;
 using Menu;
-using System.Diagnostics;
 using UnityEngine;
 
 namespace Client.Menus;
@@ -53,9 +52,15 @@ sealed class OnlineMenu : Menu.Menu
         back.GetButtonBehavior.greyedOut = greyed;
         join.GetButtonBehavior.greyedOut = greyed;
 
-        if (manager.upcomingProcess == null && Plugin.ClientState == ConnectionState.Connected && Plugin.StartRoom != null) {
+        if (EnterSession.Queue.Drain() is EnterSession session) {
+            Plugin.startPacket = session;
+        }
+
+        if (manager.upcomingProcess == null && Plugin.ClientState == ConnectionState.Connected && Plugin.startPacket is EnterSession s) {
+            Plugin.Log.LogDebug($"Received rain timer ({s.RainTimer} / {s.RainTimerMax}) and starting room ({s.StartingRoom})");
+
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
-            manager.menuSetup.startGameCondition = Plugin.online;
+            manager.menuSetup.startGameCondition = (ProcessManager.MenuSetup.StoryGameInitCondition)(-40);
         }
     }
 }

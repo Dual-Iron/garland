@@ -2,7 +2,6 @@
 using BepInEx.Logging;
 using Common;
 using LiteNetLib;
-using LiteNetLib.Utils;
 using System;
 using System.Diagnostics;
 using System.Security.Permissions;
@@ -24,17 +23,16 @@ sealed partial class Plugin : BaseUnityPlugin
     {
         try {
             GameHooks();
+
+            On.RainWorld.Start += RainWorld_Start;
+            On.RainWorld.Update += RainWorld_Update;
+
+            // Small optimization
+            On.SoundLoader.ShouldSoundPlay += delegate { return false; };
         }
         catch (Exception e) {
             Log.LogFatal(e);
-            return;
         }
-
-        On.RainWorld.Start += RainWorld_Start;
-        On.RainWorld.Update += RainWorld_Update;
-
-        // Small optimization
-        On.SoundLoader.ShouldSoundPlay += delegate { return false; };
     }
 
     private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
@@ -128,11 +126,13 @@ sealed partial class Plugin : BaseUnityPlugin
             DateTime now = DateTime.UtcNow;
             Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
-            NetDataWriter writer = new();
-            writer.Put((ushort)1);
-            writer.Put((ushort)1);
-            writer.Put(ServerConfig.StartingRoom);
-            peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game) {
+                var rain = game.world.rainCycle;
+
+                EnterSession session = new((ushort)rain.timer, (ushort)rain.cycleLength, (ushort)rain.rainbowSeed, ServerConfig.StartingRoom);
+
+                peer.Send(session, DeliveryMethod.ReliableOrdered);
+            }
         };
 
         listener.PeerDisconnectedEvent += (peer, info) => {

@@ -4,15 +4,11 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using RWCustom;
 using System;
-using UnityEngine;
 
 namespace Client;
 
 sealed partial class Plugin
 {
-    public const ProcessManager.MenuSetup.StoryGameInitCondition online = (ProcessManager.MenuSetup.StoryGameInitCondition)(-40);
-    public static string? StartRoom;
-
     private static void SessionHooks()
     {
         // Prevent errors and abnormal behavior with custom session type
@@ -31,14 +27,21 @@ sealed partial class Plugin
 
     private static void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
-        game.session = new ClientSession(game);
-        game.startingRoom = StartRoom;
+        if (startPacket is EnterSession session) {
+            game.session = new ClientSession(game);
+            game.startingRoom = session.StartingRoom;
+        }
 
         orig(self, game);
     }
 
     private static void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
     {
+        if (self.game?.session is not ClientSession) {
+            orig(self);
+            return;
+        }
+
         string startingRoom = self.game.startingRoom;
         string[] split = startingRoom.Split('_');
         if (split.Length < 2) {
@@ -52,18 +55,28 @@ sealed partial class Plugin
         else
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
 
-        self.LoadWorld(startingRegion, 0, false);
+        self.LoadWorld(startingRegion, 0, false); // TODO: session.SlugcatWorldNumber
         self.FIRSTROOM = startingRoom;
     }
 
     private static void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
     {
+        if (self.game?.session is not ClientSession) {
+            orig(self, game, region, name, singleRoomWorld);
+            return;
+        }
+
+        // Assumes Session is either IsStorySession or IsArenaSession, so pretend game is null.
         orig(self, null, region, name, singleRoomWorld);
 
         self.game = game;
 
-        if (game != null) {
-            self.rainCycle = new(self, minutes: 100);
+        if (game?.session is ClientSession && startPacket is EnterSession packet) {
+            self.rainCycle = new(self, 0) {
+                cycleLength = packet.RainTimerMax,
+                timer = packet.RainTimer,
+                storyMode = true,
+            };
         }
     }
 
@@ -93,8 +106,13 @@ sealed partial class Plugin
 
         // Load rooms like it's a story session (even though it's not)
         cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
-        cursor.Emit(OpCodes.Pop);
-        cursor.Emit(OpCodes.Ldc_I4_1);
+        cursor.Emit(OpCodes.Ldarg_0);
+        cursor.EmitDelegate(UpdateRoomsForStorySession);
+
+        static bool UpdateRoomsForStorySession(bool orig, RainWorldGame game)
+        {
+            return orig || game.session is ClientSession;
+        }
     }
 
     private static void RainWorldGame_GrafUpdate(ILContext il)
@@ -127,18 +145,30 @@ sealed partial class Plugin
 
         // Don't initialize RoomRealizer. Room realization logic must be redone.
         cursor.GotoPrev(MoveType.After, i => i.MatchLdfld<World>("singleRoomWorld"));
-        cursor.Emit(OpCodes.Pop);
-        cursor.Emit(OpCodes.Ldc_I4_1);
+        cursor.Emit(OpCodes.Ldarg_0);
+        cursor.EmitDelegate(ShouldNotInitRoomRealizer);
+
+        static bool ShouldNotInitRoomRealizer(bool orig, RainWorldGame game)
+        {
+            return orig || game.session is ClientSession;
+        }
 
         // Remove check that throws an exception if no creatures are found for followAbstractCreature
         cursor.GotoPrev(MoveType.After, i => i.MatchLdfld<RoomCamera>("followAbstractCreature"));
-        cursor.Emit(OpCodes.Pop);
-        cursor.Emit(OpCodes.Ldc_I4_1);
+        cursor.Emit(OpCodes.Ldarg_0);
+        cursor.EmitDelegate(IsFollowAbstractCreatureNull);
+
+        static bool IsFollowAbstractCreatureNull(AbstractCreature orig, RainWorldGame game)
+        {
+            return orig != null || game.session is ClientSession;
+        }
     }
 
     private static void RainWorldGame_ExitToMenu(On.RainWorldGame.orig_ExitToMenu orig, RainWorldGame self)
     {
-        StopClient();
+        if (self.session is ClientSession) {
+            StopClient();
+        }
         orig(self);
     }
 }

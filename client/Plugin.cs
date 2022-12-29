@@ -15,29 +15,70 @@ public enum ConnectionState
 sealed partial class Plugin : BaseUnityPlugin
 {
     public static ManualLogSource Log { get; } = BepInEx.Logging.Logger.CreateLogSource("Client");
-
-    private static RainWorld? rw;
-    private static readonly EventBasedNetListener listener = new();
-
-    public static NetManager Client { get; private set; } = new(listener);
+    public static NetManager Client { get; private set; } = InitClient();
     public static ConnectionState ClientState { get; private set; }
+    public static EnterSession? startPacket;
+
+    private static NetManager InitClient()
+    {
+        EventBasedNetListener listener = new();
+        listener.NetworkReceiveEvent += ReceivePacket;
+        listener.PeerConnectedEvent += p => {
+            ClientState = ConnectionState.Connected;
+            Log.LogDebug("Connected");
+        };
+        listener.PeerDisconnectedEvent += (peer, info) => {
+            ClientState = ConnectionState.Disconnected;
+            Log.LogDebug($"Disconnected ({info.Reason})");
+        };
+        return new(listener);
+    }
+
+    private static void ReceivePacket(NetPeer peer, NetPacketReader data, DeliveryMethod deliveryMethod)
+    {
+        var type = (PacketType)data.GetUShort();
+
+        switch (type) {
+            case PacketType.EnterSession:
+                EnterSession.Queue.Enqueue(data.Read<EnterSession>());
+                break;
+
+            default: Log.LogError($"Unknown packet type: 0x{type:X}"); break;
+        }
+    }
+
+    public static void StopClient()
+    {
+        startPacket = null;
+        ClientState = ConnectionState.Disconnected;
+        Client.Stop(sendDisconnectMessages: true);
+    }
+
+    public static void StartConnecting(string address, int port)
+    {
+        StopClient();
+
+        ClientState = ConnectionState.Connecting;
+        Client.Start();
+        Client.Connect(address, port, Variables.ConnectionKey);
+
+        Log.LogDebug($"Connecting to {address}:{port}");
+    }
 
     public void OnEnable()
     {
-        MenuHooks();
-        SessionHooks();
+        try {
+            MenuHooks();
+            SessionHooks();
 
-        On.RainWorld.Start += RainWorld_Start;
-        On.RainWorld.Update += RainWorld_Update;
+            On.RainWorld.Update += RainWorld_Update;
+        }
+        catch (Exception e) {
+            Log.LogError(e);
+        }
     }
 
-    private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
-    {
-        orig(self);
-        rw = self;
-    }
-
-    private void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
+    private static void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
     {
         orig(self);
 
@@ -45,66 +86,7 @@ sealed partial class Plugin : BaseUnityPlugin
             Client.PollEvents();
         }
         catch (Exception e) {
-            Logger.LogError(e);
+            Log.LogError(e);
         }
     }
-
-    public static void StopClient()
-    {
-        ClientState = ConnectionState.Disconnected;
-        Client.Stop(sendDisconnectMessages: true);
-    }
-
-    public static void StartConnecting(string address, int port)
-    {
-        ClientState = ConnectionState.Connecting;
-
-        Client.Stop(sendDisconnectMessages: true);
-        Client.Start();
-
-        Client.Connect(address, port, Variables.ConnectionKey);
-
-        Log.LogDebug($"Connecting to {address}:{port}");
-        listener.NetworkReceiveEvent += ProcessPacket;
-        listener.PeerConnectedEvent += p => {
-            ClientState = ConnectionState.Connected;
-            Log.LogDebug("Connected");
-        };
-        listener.PeerDisconnectedEvent += (peer, info) => {
-            ClientState = ConnectionState.Disconnected;
-            Log.LogDebug($"Disconnected. {info.SocketErrorCode}: {info.Reason}");
-        };
-    }
-
-    private static void ProcessPacket(NetPeer fromPeer, NetPacketReader dataReader, DeliveryMethod deliveryMethod)
-    {
-        ushort type = dataReader.GetUShort();
-
-        if (type == 1) {
-            ushort version = dataReader.GetUShort();
-            string startRoom = dataReader.GetString();
-
-            StartRoom = startRoom;
-        }
-    }
-
-    // TODO use or delete this
-    //private static void StartAndJoin(int port)
-    //{
-    //    ClientState = ConnectionState.StartingInternalServer;
-
-    //    var startInfo = new ProcessStartInfo {
-    //        WorkingDirectory = Variables.ServerPath(),
-    //        FileName = Variables.ServerPath("RainWorld.exe"),
-    //        Arguments = $"-batchmode -port={port} -pid={Process.GetCurrentProcess().Id}",
-    //        UseShellExecute = false,
-    //        CreateNoWindow = true,
-    //        RedirectStandardOutput = true,
-    //    };
-
-    //    startInfo.EnvironmentVariables.Remove("DOORSTOP_INITIALIZED");
-    //    startInfo.EnvironmentVariables.Remove("DOORSTOP_DISABLE");
-
-    //    Process.Start(startInfo).Dispose();
-    //}
 }

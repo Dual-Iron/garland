@@ -2,10 +2,7 @@
 
 public static class Variables
 {
+    public const string ConnectionKey = "GARLAND-0"; // increment with each major version
     public const int MaxConnections = 55; // arbitrary
     public const int DefaultPort = 10933;
-    public const string ConnectionKey = "GARLAND";
-
-    //public static string ServerPath() => Path.Combine(RWCustom.Custom.RootFolderDirectory(), "server");
-    //public static string ServerPath(string subpath) => Path.Combine(ServerPath(), subpath);
 }
