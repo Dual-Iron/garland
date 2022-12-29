@@ -22,18 +22,68 @@ sealed partial class Plugin : BaseUnityPlugin
 
     public void OnEnable()
     {
-        GameHooks();
+        try {
+            GameHooks();
+        }
+        catch (Exception e) {
+            Log.LogFatal(e);
+            return;
+        }
 
+        On.RainWorld.Start += RainWorld_Start;
         On.RainWorld.Update += RainWorld_Update;
 
-        // Small optimizations
-        On.Music.MusicPlayer.Update += delegate { };
+        // Small optimization
         On.SoundLoader.ShouldSoundPlay += delegate { return false; };
+    }
+
+    private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
+    {
+        try {
+            orig(self);
+        }
+        catch (Exception e) {
+            Logger.LogFatal(e);
+
+            Application.Quit();
+        }
+    }
+
+    private void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
+    {
+        // Don't play sounds from the console.
+        AudioListener.pause = true;
+
+        try {
+            orig(self);
+        }
+        catch (Exception e) {
+            Log.LogError($"Exception in update logic. {e}");
+        }
+
+        try {
+            server.PollEvents();
+        }
+        catch (Exception e) {
+            Log.LogError($"Exception in server logic. {e}");
+        }
+
+        // If opened by Rain World client, check if the client has exited every frame.
+        if (pid.HasValue) {
+            using var p = Process.GetProcessById(pid.Value);
+            if (p.HasExited) {
+                Log.LogInfo("Client process closed. Stopping server.");
+
+                server.Stop(sendDisconnectMessages: true);
+
+                Application.Quit();
+            }
+        }
     }
 
     static void ParseArgs(out int port, out int? pid)
     {
-        port = Variables.Port;
+        port = Variables.DefaultPort;
         pid = null;
 
         foreach (string arg in Environment.GetCommandLineArgs()) {
@@ -51,7 +101,7 @@ sealed partial class Plugin : BaseUnityPlugin
         // Parse command-line args
         ParseArgs(out int port, out int? pid);
 
-        if (port != Variables.Port) {
+        if (port != Variables.DefaultPort) {
             Log.LogDebug($"Using non-standard port: {port}");
         }
 
@@ -66,9 +116,6 @@ sealed partial class Plugin : BaseUnityPlugin
         // Start server
         EventBasedNetListener listener = new();
         NetManager server = new(listener) { AutoRecycle = true };
-        server.Start(port);
-
-        Log.LogDebug("Ready for client connections");
 
         listener.ConnectionRequestEvent += request => {
             if (server.ConnectedPeersCount < Variables.MaxConnections)
@@ -82,7 +129,9 @@ sealed partial class Plugin : BaseUnityPlugin
             Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
             NetDataWriter writer = new();
-            writer.Put("Hello client!");
+            writer.Put((ushort)1);
+            writer.Put((ushort)1);
+            writer.Put(ServerConfig.StartingRoom);
             peer.Send(writer, DeliveryMethod.ReliableOrdered);
         };
 
@@ -90,37 +139,18 @@ sealed partial class Plugin : BaseUnityPlugin
             Log.LogDebug($"Disconnected from {peer.EndPoint.Address}: {info.Reason}");
         };
 
+        server.Start(port);
+
+        Log.LogDebug("Ready for client connections");
+
         return server;
     }
-
-    private void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
-    {
-        // Don't play sounds from the console.
-        AudioListener.pause = true;
-
-        try {
-            orig(self);
-        }
-        catch (Exception e) {
-            Log.LogError($"Exception bubbled up to RainWorld.Update(). {e}");
-        }
-
-        try {
-            // If opened by Rain World client, check if the client has exited every frame.
-            if (pid.HasValue && Process.GetProcessById(pid.Value).HasExited) {
-                Log.LogInfo("Client process closed. Stopping server.");
-
-                server.Stop(sendDisconnectMessages: true);
-
-                Application.Quit();
-            }
-            // Poll each update.
-            else {
-                server.PollEvents();
-            }
-        }
-        catch (Exception e) {
-            Log.LogError(e);
-        }
-    }
 }
+
+// format:
+// {u16} packet type
+
+// packet types:
+// 1: freshly connected
+//   {u16} version, currently 1
+//   {str} starting room

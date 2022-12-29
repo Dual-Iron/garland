@@ -8,7 +8,9 @@
 
   <ItemGroup>
     <Reference Include="../lib/*.refstub.dll" />
-    <Compile Include="../lib/**/*.cs" />
+    <Compile Include="../lib/**/*.cs">
+      <Visible>false</Visible>
+    </Compile>
   </ItemGroup>
 
 </Project>

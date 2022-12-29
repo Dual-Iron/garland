@@ -2,10 +2,7 @@
 using BepInEx.Logging;
 using Common;
 using LiteNetLib;
-using LiteNetLib.Utils;
 using System;
-using System.Diagnostics;
-using static LizardTongue;
 
 namespace Client;
 
@@ -19,6 +16,7 @@ sealed partial class Plugin : BaseUnityPlugin
 {
     public static ManualLogSource Log { get; } = BepInEx.Logging.Logger.CreateLogSource("Client");
 
+    private static RainWorld? rw;
     private static readonly EventBasedNetListener listener = new();
 
     public static NetManager Client { get; private set; } = new(listener);
@@ -29,7 +27,14 @@ sealed partial class Plugin : BaseUnityPlugin
         MenuHooks();
         SessionHooks();
 
+        On.RainWorld.Start += RainWorld_Start;
         On.RainWorld.Update += RainWorld_Update;
+    }
+
+    private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
+    {
+        orig(self);
+        rw = self;
     }
 
     private void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
@@ -37,11 +42,17 @@ sealed partial class Plugin : BaseUnityPlugin
         orig(self);
 
         try {
-            Client?.PollEvents();
+            Client.PollEvents();
         }
         catch (Exception e) {
             Logger.LogError(e);
         }
+    }
+
+    public static void StopClient()
+    {
+        ClientState = ConnectionState.Disconnected;
+        Client.Stop(sendDisconnectMessages: true);
     }
 
     public static void StartConnecting(string address, int port)
@@ -54,11 +65,7 @@ sealed partial class Plugin : BaseUnityPlugin
         Client.Connect(address, port, Variables.ConnectionKey);
 
         Log.LogDebug($"Connecting to {address}:{port}");
-
-        listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod) => {
-            DateTime now = DateTime.UtcNow;
-            Log.LogDebug($"Received \"{dataReader.GetString(100)}\" at {now:HH:mm:ss}.{now.Millisecond:D3}");
-        };
+        listener.NetworkReceiveEvent += ProcessPacket;
         listener.PeerConnectedEvent += p => {
             ClientState = ConnectionState.Connected;
             Log.LogDebug("Connected");
@@ -67,6 +74,18 @@ sealed partial class Plugin : BaseUnityPlugin
             ClientState = ConnectionState.Disconnected;
             Log.LogDebug($"Disconnected. {info.SocketErrorCode}: {info.Reason}");
         };
+    }
+
+    private static void ProcessPacket(NetPeer fromPeer, NetPacketReader dataReader, DeliveryMethod deliveryMethod)
+    {
+        ushort type = dataReader.GetUShort();
+
+        if (type == 1) {
+            ushort version = dataReader.GetUShort();
+            string startRoom = dataReader.GetString();
+
+            StartRoom = startRoom;
+        }
     }
 
     // TODO use or delete this

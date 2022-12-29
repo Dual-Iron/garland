@@ -7,7 +7,7 @@ namespace Client.Menus;
 
 sealed class OnlineMenu : Menu.Menu
 {
-    const int port = Variables.Port;
+    const int port = Variables.DefaultPort;
 
     readonly SimpleButton back;
     readonly SimpleButton join;
@@ -53,17 +53,9 @@ sealed class OnlineMenu : Menu.Menu
         back.GetButtonBehavior.greyedOut = greyed;
         join.GetButtonBehavior.greyedOut = greyed;
 
-        if (manager.upcomingProcess == null && Plugin.ClientState == ConnectionState.Connected) {
+        if (manager.upcomingProcess == null && Plugin.ClientState == ConnectionState.Connected && Plugin.StartRoom != null) {
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
-        }
-    }
-
-    public override void CommunicateWithUpcomingProcess(MainLoopProcess nextProcess)
-    {
-        base.CommunicateWithUpcomingProcess(nextProcess);
-
-        if (nextProcess is RainWorldGame game) {
-            game.session = new Sessions.ClientSession(game);
+            manager.menuSetup.startGameCondition = Plugin.online;
         }
     }
 }

@@ -1,40 +1,38 @@
-﻿using Common;
+﻿using Client.Sessions;
+using Common;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using RWCustom;
 using System;
-using System.IO;
-using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace Server;
+namespace Client;
 
 sealed partial class Plugin
 {
-    private static void GameHooks()
-    {
-        // Jump right into the game immediately (because lobbies aren't implemented)
-        On.RainWorld.LoadSetupValues += RainWorld_LoadSetupValues;
+    public const ProcessManager.MenuSetup.StoryGameInitCondition online = (ProcessManager.MenuSetup.StoryGameInitCondition)(-40);
+    public static string? StartRoom;
 
+    private static void SessionHooks()
+    {
         // Prevent errors and abnormal behavior with custom session type
         On.OverWorld.ctor += OverWorld_ctor;
         On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.World.ctor += World_ctor;
-        IL.RainWorldGame.Update += RainWorldGame_Update;
+        IL.RainWorldGame.Update += RainWorldGame_Update; // Custom pause menu logic
+        IL.RainWorldGame.GrafUpdate += RainWorldGame_GrafUpdate; // Custom pause menu logic
 
         // Decentralize RoomCamera.followAbstractCreature
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
-    }
 
-    private static RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
-    {
-        return orig(distributionBuild) with { startScreen = false, playMusic = false };
+        // Fix pausing
+        On.RainWorldGame.ExitToMenu += RainWorldGame_ExitToMenu;
     }
 
     private static void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
-        game.session = new ServerSession(game);
-        game.startingRoom = ServerConfig.StartingRoom;
+        game.session = new ClientSession(game);
+        game.startingRoom = StartRoom;
 
         orig(self, game);
     }
@@ -54,7 +52,7 @@ sealed partial class Plugin
         else
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
 
-        self.LoadWorld(startingRegion, ServerConfig.UseSlugcat, false);
+        self.LoadWorld(startingRegion, 0, false);
         self.FIRSTROOM = startingRoom;
     }
 
@@ -65,18 +63,60 @@ sealed partial class Plugin
         self.game = game;
 
         if (game != null) {
-            self.rainCycle = new(self, Mathf.Lerp(ServerConfig.CycleTimeMinutesMin, ServerConfig.CycleTimeMinutesMax, UnityEngine.Random.value));
+            self.rainCycle = new(self, minutes: 100);
         }
     }
 
+    // TODO fix packet system please
+    // TODO make follow assigned slugcat
     private static void RainWorldGame_Update(ILContext il)
     {
         ILCursor cursor = new(il);
+
+        // Pretend pause menu is null
+        cursor.GotoNext(MoveType.After, i => i.MatchLdfld<RainWorldGame>("pauseMenu"));
+        cursor.EmitDelegate(ModifyPause);
+
+        static Menu.PauseMenu? ModifyPause(Menu.PauseMenu pauseMenu)
+        {
+            // Skip vanilla pause menu logic—update both the game and the pause menu at once
+            if (pauseMenu?.game.session is ClientSession) {
+                pauseMenu.Update();
+                pauseMenu.game.lastPauseButton = true; // prevent opening multiple pause menus at once
+                foreach (RoomCamera camera in pauseMenu.game.cameras) {
+                    camera.hud?.Update();
+                }
+                return null;
+            }
+            return pauseMenu;
+        }
 
         // Load rooms like it's a story session (even though it's not)
         cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
         cursor.Emit(OpCodes.Pop);
         cursor.Emit(OpCodes.Ldc_I4_1);
+    }
+
+    private static void RainWorldGame_GrafUpdate(ILContext il)
+    {
+        ILCursor cursor = new(il);
+
+        cursor.GotoNext(MoveType.After, i => i.MatchLdfld<RainWorldGame>("pauseMenu"));
+        cursor.Emit(OpCodes.Ldarg_1); // timeStacker
+        cursor.EmitDelegate(ModifyPause);
+
+        static Menu.PauseMenu? ModifyPause(Menu.PauseMenu pauseMenu, float timeStacker)
+        {
+            // Skip vanilla pause menu logic—render both the game and the pause menu at once
+            if (pauseMenu?.game.session is ClientSession) {
+                pauseMenu.GrafUpdate(timeStacker);
+                foreach (RoomCamera camera in pauseMenu.game.cameras) {
+                    camera.hud?.Draw(timeStacker);
+                }
+                return null;
+            }
+            return pauseMenu;
+        }
     }
 
     private static void RainWorldGame_ctor(ILContext il)
@@ -94,5 +134,11 @@ sealed partial class Plugin
         cursor.GotoPrev(MoveType.After, i => i.MatchLdfld<RoomCamera>("followAbstractCreature"));
         cursor.Emit(OpCodes.Pop);
         cursor.Emit(OpCodes.Ldc_I4_1);
+    }
+
+    private static void RainWorldGame_ExitToMenu(On.RainWorldGame.orig_ExitToMenu orig, RainWorldGame self)
+    {
+        StopClient();
+        orig(self);
     }
 }
