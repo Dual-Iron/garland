@@ -36,10 +36,10 @@ sealed partial class Plugin : BaseUnityPlugin
 
     private static void ReceivePacket(NetPeer peer, NetPacketReader data, DeliveryMethod deliveryMethod)
     {
-        var type = (PacketType)data.GetUShort();
+        var type = (PacketKind)data.GetUShort();
 
         switch (type) {
-            case PacketType.EnterSession:
+            case PacketKind.EnterSession:
                 EnterSession.Queue.Enqueue(data.Read<EnterSession>());
                 break;
 

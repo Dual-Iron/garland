@@ -80,7 +80,6 @@ sealed partial class Plugin
         }
     }
 
-    // TODO fix packet system please
     // TODO make follow assigned slugcat
     private static void RainWorldGame_Update(ILContext il)
     {
