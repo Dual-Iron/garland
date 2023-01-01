@@ -1,3 +1,4 @@
+#nullable disable
 #if DEBUG
 #define STATS_ENABLED
 #endif

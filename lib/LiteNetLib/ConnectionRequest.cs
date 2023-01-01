@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿#nullable disable
+using System.Net;
 using System.Threading;
 using LiteNetLib.Utils;
 
