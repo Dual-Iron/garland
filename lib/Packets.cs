@@ -1,7 +1,29 @@
+using LiteNetLib;
 using LiteNetLib.Utils;
+using System;
 using System.Collections.Generic;
 
 namespace Common;
+
+public static partial class Packets
+{
+    private static readonly NetDataWriter writer = new();
+
+    public static void Send<T>(this NetPeer peer, T value, DeliveryMethod deliveryMethod) where T : IPacket
+    {
+        writer.Reset();
+        writer.Put((ushort)value.GetKind());
+        writer.Put(value);
+        peer.Send(writer, deliveryMethod);
+    }
+
+    public static T Read<T>(this NetDataReader reader) where T : struct, INetSerializable
+    {
+        T value = default;
+        value.Deserialize(reader);
+        return value;
+    }
+}
 
 public sealed class PacketQueue<T> where T : struct
 {
