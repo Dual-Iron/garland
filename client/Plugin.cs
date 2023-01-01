@@ -78,6 +78,11 @@ sealed partial class Plugin : BaseUnityPlugin
         }
     }
 
+    public void OnApplicationQuit()
+    {
+        StopClient();
+    }
+
     private static void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
     {
         orig(self);

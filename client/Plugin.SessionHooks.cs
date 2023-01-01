@@ -1,5 +1,4 @@
-﻿using Client.Sessions;
-using Common;
+﻿using Common;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using RWCustom;
@@ -28,7 +27,7 @@ sealed partial class Plugin
     private static void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
         if (startPacket is EnterSession session) {
-            game.session = new ClientSession(game);
+            game.session = new ClientSession(session.SlugcatWorld, game);
             game.startingRoom = session.StartingRoom;
         }
 
@@ -37,7 +36,7 @@ sealed partial class Plugin
 
     private static void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
     {
-        if (self.game?.session is not ClientSession) {
+        if (self.game?.session is not ClientSession || !startPacket.HasValue) {
             orig(self);
             return;
         }
@@ -55,13 +54,13 @@ sealed partial class Plugin
         else
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
 
-        self.LoadWorld(startingRegion, 0, false); // TODO: session.SlugcatWorldNumber
+        self.LoadWorld(startingRegion, startPacket.Value.SlugcatWorld, false);
         self.FIRSTROOM = startingRoom;
     }
 
     private static void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
     {
-        if (self.game?.session is not ClientSession) {
+        if (game?.session is not ClientSession) {
             orig(self, game, region, name, singleRoomWorld);
             return;
         }
@@ -70,14 +69,7 @@ sealed partial class Plugin
         orig(self, null, region, name, singleRoomWorld);
 
         self.game = game;
-
-        if (game?.session is ClientSession && startPacket is EnterSession packet) {
-            self.rainCycle = new(self, 0) {
-                cycleLength = packet.RainTimerMax,
-                timer = packet.RainTimer,
-                storyMode = true,
-            };
-        }
+        self.rainCycle = new(self, 10) { storyMode = true };
     }
 
     // TODO make follow assigned slugcat

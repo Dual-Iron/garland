@@ -19,6 +19,64 @@ sealed partial class Plugin : BaseUnityPlugin
 
     static int? pid;
 
+    private static NetManager StartServer()
+    {
+        // Parse command-line args
+        int port = Variables.DefaultPort;
+
+        foreach (string arg in Environment.GetCommandLineArgs()) {
+            if (arg.StartsWith("-port=") && ushort.TryParse(arg.Substring("-port=".Length), out ushort newPort)) {
+                port = newPort;
+            }
+            else if (arg.StartsWith("-pid=") && int.TryParse(arg.Substring("-pid=".Length), out int newPid)) {
+                pid = newPid;
+            }
+        }
+
+        if (port != Variables.DefaultPort) {
+            Log.LogDebug($"Using non-standard port: {port}");
+        }
+
+        if (pid != null) {
+            Log.LogDebug($"Started from client process: {pid}");
+        }
+
+        // Port forwarding
+        Upnp.Open(port);
+
+        // Start server
+        EventBasedNetListener listener = new();
+        NetManager server = new(listener) { AutoRecycle = true };
+
+        listener.ConnectionRequestEvent += request => {
+            if (server.ConnectedPeersCount < Variables.MaxConnections)
+                request.AcceptIfKey(Variables.ConnectionKey);
+            else
+                request.Reject();
+        };
+
+        listener.PeerConnectedEvent += peer => {
+            DateTime now = DateTime.UtcNow;
+            Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
+
+            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game) {
+                EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, ServerConfig.StartingRoom);
+
+                peer.Send(packet, DeliveryMethod.ReliableOrdered);
+            }
+        };
+
+        listener.PeerDisconnectedEvent += (peer, info) => {
+            Log.LogDebug($"Disconnected from {peer.EndPoint.Address}: {info.Reason}");
+        };
+
+        server.Start(port);
+
+        Log.LogDebug("Ready for client connections");
+
+        return server;
+    }
+
     public void OnEnable()
     {
         try {
@@ -35,19 +93,19 @@ sealed partial class Plugin : BaseUnityPlugin
         }
     }
 
-    private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
+    private static void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
     {
         try {
             orig(self);
         }
         catch (Exception e) {
-            Logger.LogFatal(e);
+            Log.LogFatal(e);
 
             Application.Quit();
         }
     }
 
-    private void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
+    private static void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
     {
         // Don't play sounds from the console.
         AudioListener.pause = true;
@@ -78,79 +136,4 @@ sealed partial class Plugin : BaseUnityPlugin
             }
         }
     }
-
-    static void ParseArgs(out int port, out int? pid)
-    {
-        port = Variables.DefaultPort;
-        pid = null;
-
-        foreach (string arg in Environment.GetCommandLineArgs()) {
-            if (arg.StartsWith("-port=") && int.TryParse(arg.Substring("-port=".Length), out int newPort) && newPort >= 0) {
-                port = newPort;
-            }
-            else if (arg.StartsWith("-pid=") && int.TryParse(arg.Substring("-pid=".Length), out int newPid) && newPid >= 0) {
-                pid = newPid;
-            }
-        }
-    }
-
-    private static NetManager StartServer()
-    {
-        // Parse command-line args
-        ParseArgs(out int port, out int? pid);
-
-        if (port != Variables.DefaultPort) {
-            Log.LogDebug($"Using non-standard port: {port}");
-        }
-
-        if (pid != null) {
-            Log.LogDebug($"Started from client process: {pid}");
-            Plugin.pid = pid;
-        }
-
-        // Port forwarding
-        Upnp.Open(port);
-
-        // Start server
-        EventBasedNetListener listener = new();
-        NetManager server = new(listener) { AutoRecycle = true };
-
-        listener.ConnectionRequestEvent += request => {
-            if (server.ConnectedPeersCount < Variables.MaxConnections)
-                request.AcceptIfKey(Variables.ConnectionKey);
-            else
-                request.Reject();
-        };
-
-        listener.PeerConnectedEvent += peer => {
-            DateTime now = DateTime.UtcNow;
-            Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
-
-            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game) {
-                var rain = game.world.rainCycle;
-
-                EnterSession session = new((ushort)rain.timer, (ushort)rain.cycleLength, (ushort)rain.rainbowSeed, ServerConfig.StartingRoom);
-
-                peer.Send(session, DeliveryMethod.ReliableOrdered);
-            }
-        };
-
-        listener.PeerDisconnectedEvent += (peer, info) => {
-            Log.LogDebug($"Disconnected from {peer.EndPoint.Address}: {info.Reason}");
-        };
-
-        server.Start(port);
-
-        Log.LogDebug("Ready for client connections");
-
-        return server;
-    }
 }
-
-// format:
-// {u16} packet type
-
-// packet types:
-// 1: freshly connected
-//   {u16} version, currently 1
-//   {str} starting room

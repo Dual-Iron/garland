@@ -17,7 +17,7 @@ Input = 0x100 {
 
 # Sent to a client after they join the game and begin a RainWorldGame instance.
 EnterSession = 0x200 {
-    u8  SlugcatWorldNumber
+    u8  SlugcatWorld
     u16 RainbowSeed
     str StartingRoom
 }
@@ -161,7 +161,7 @@ public record struct {{packet.Name}}({{Params()}}) : IPacket
 {
     public static PacketQueue<{{packet.Name}}> Queue { get; } = new();
 
-    public PacketKind Kind => PacketKind.{{packet.Name}};
+    public PacketKind GetKind() => PacketKind.{{packet.Name}};
 
     public void Deserialize(NetDataReader reader)
     {

@@ -2,7 +2,10 @@
 
 sealed class ServerSession : GameSession
 {
-    public ServerSession(RainWorldGame game) : base(game)
+    public ServerSession(byte slugcatWorld, RainWorldGame game) : base(game)
     {
+        SlugcatWorld = slugcatWorld;
     }
+
+    public byte SlugcatWorld { get; }
 }

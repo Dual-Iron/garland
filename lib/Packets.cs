@@ -39,5 +39,5 @@ public sealed class PacketQueue<T> where T : struct
 
 public interface IPacket : INetSerializable
 {
-    PacketKind Kind { get; }
+    PacketKind GetKind();
 }

@@ -19,7 +19,7 @@ public static class Utils
     public static void Send<T>(this NetPeer peer, T value, DeliveryMethod deliveryMethod) where T : IPacket
     {
         writer.Reset();
-        writer.Put((ushort)value.Kind);
+        writer.Put((ushort)value.GetKind());
         writer.Put(value);
         peer.Send(writer, deliveryMethod);
     }

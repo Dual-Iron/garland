@@ -57,7 +57,7 @@ sealed class OnlineMenu : Menu.Menu
         }
 
         if (manager.upcomingProcess == null && Plugin.ClientState == ConnectionState.Connected && Plugin.startPacket is EnterSession s) {
-            Plugin.Log.LogDebug($"Received rain timer ({s.RainTimer} / {s.RainTimerMax}) and starting room ({s.StartingRoom})");
+            Plugin.Log.LogDebug($"OK to enter game: {s}");
 
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
             manager.menuSetup.startGameCondition = (ProcessManager.MenuSetup.StoryGameInitCondition)(-40);

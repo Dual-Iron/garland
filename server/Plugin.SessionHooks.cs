@@ -11,6 +11,9 @@ sealed partial class Plugin
 {
     private static void GameHooks()
     {
+        // Just debug stuff
+        On.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
+
         // Jump right into the game immediately (because lobbies aren't implemented)
         On.RainWorld.LoadSetupValues += RainWorld_LoadSetupValues;
 
@@ -24,6 +27,13 @@ sealed partial class Plugin
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
+    private static void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
+    {
+        orig(self, ID);
+
+        Log.LogDebug($"Switched process to {ID}");
+    }
+
     private static RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
     {
         return orig(distributionBuild) with { startScreen = false, playMusic = false };
@@ -31,7 +41,7 @@ sealed partial class Plugin
 
     private static void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
-        game.session = new ServerSession(game);
+        game.session = new ServerSession(ServerConfig.SlugcatWorld, game);
         game.startingRoom = ServerConfig.StartingRoom;
 
         orig(self, game);
@@ -52,7 +62,7 @@ sealed partial class Plugin
         else
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
 
-        self.LoadWorld(startingRegion, ServerConfig.UseSlugcat, false);
+        self.LoadWorld(startingRegion, ServerConfig.SlugcatWorld, false);
         self.FIRSTROOM = startingRoom;
     }
 

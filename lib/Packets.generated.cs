@@ -21,7 +21,7 @@ public record struct Input(float X, float Y, byte Bitmask) : IPacket
 {
     public static PacketQueue<Input> Queue { get; } = new();
 
-    public PacketKind Kind => PacketKind.Input;
+    public PacketKind GetKind() => PacketKind.Input;
 
     public void Deserialize(NetDataReader reader)
     {
@@ -49,22 +49,22 @@ public record struct Input(float X, float Y, byte Bitmask) : IPacket
 }
 
 /// <summary>Sent to a client after they join the game and begin a RainWorldGame instance.</summary>
-public record struct EnterSession(byte SlugcatWorldNumber, ushort RainbowSeed, string StartingRoom) : IPacket
+public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, string StartingRoom) : IPacket
 {
     public static PacketQueue<EnterSession> Queue { get; } = new();
 
-    public PacketKind Kind => PacketKind.EnterSession;
+    public PacketKind GetKind() => PacketKind.EnterSession;
 
     public void Deserialize(NetDataReader reader)
     {
-        SlugcatWorldNumber = reader.GetByte();
+        SlugcatWorld = reader.GetByte();
         RainbowSeed = reader.GetUShort();
         StartingRoom = reader.GetString();
     }
 
     public void Serialize(NetDataWriter writer)
     {
-        writer.Put(SlugcatWorldNumber);
+        writer.Put(SlugcatWorld);
         writer.Put(RainbowSeed);
         writer.Put(StartingRoom);
     }
@@ -75,7 +75,7 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
 {
     public static PacketQueue<SyncRain> Queue { get; } = new();
 
-    public PacketKind Kind => PacketKind.SyncRain;
+    public PacketKind GetKind() => PacketKind.SyncRain;
 
     public void Deserialize(NetDataReader reader)
     {
@@ -99,7 +99,7 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
 {
     public static PacketQueue<SyncDeathRain> Queue { get; } = new();
 
-    public PacketKind Kind => PacketKind.SyncDeathRain;
+    public PacketKind GetKind() => PacketKind.SyncDeathRain;
 
     public void Deserialize(NetDataReader reader)
     {
@@ -123,7 +123,7 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
 {
     public static PacketQueue<SyncAntiGrav> Queue { get; } = new();
 
-    public PacketKind Kind => PacketKind.SyncAntiGrav;
+    public PacketKind GetKind() => PacketKind.SyncAntiGrav;
 
     public void Deserialize(NetDataReader reader)
     {
