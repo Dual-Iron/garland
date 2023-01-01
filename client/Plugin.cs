@@ -22,7 +22,7 @@ sealed partial class Plugin : BaseUnityPlugin
     private static NetManager InitClient()
     {
         EventBasedNetListener listener = new();
-        listener.NetworkReceiveEvent += ReceivePacket;
+        listener.NetworkReceiveEvent += (peer, data, method) => Packets.QueuePacket(data, Log);
         listener.PeerConnectedEvent += p => {
             ClientState = ConnectionState.Connected;
             Log.LogDebug("Connected");
@@ -32,19 +32,6 @@ sealed partial class Plugin : BaseUnityPlugin
             Log.LogDebug($"Disconnected ({info.Reason})");
         };
         return new(listener);
-    }
-
-    private static void ReceivePacket(NetPeer peer, NetPacketReader data, DeliveryMethod deliveryMethod)
-    {
-        var type = (PacketKind)data.GetUShort();
-
-        switch (type) {
-            case PacketKind.EnterSession:
-                EnterSession.Queue.Enqueue(data.Read<EnterSession>());
-                break;
-
-            default: Log.LogError($"Unknown packet type: 0x{type:X}"); break;
-        }
     }
 
     public static void StopClient()

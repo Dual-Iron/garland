@@ -60,19 +60,22 @@ while (reader.TextRemaining()) {
 }
 
 // Generate C# source
-StringBuilder source = new("using LiteNetLib.Utils;\r\n\r\nnamespace Common;\r\n\r\n");
+StringBuilder source = new("""
+using LiteNetLib;
+using LiteNetLib.Utils;
+using System;
 
-source.AppendLine("public enum PacketKind : ushort\r\n{");
-foreach (var packet in packetKinds) {
-    if (packet.Comment != null) {
-        source.AppendLine($"    /// <summary>{packet.Comment}</summary>");
-    }
-    source.AppendLine($"    {packet.Name} = {packet.Value},");
-}
-source.AppendLine("}\r\n");
+namespace Common;
+
+
+""");
+
+WritePacketKindEnum();
+
+WritePacketsClass();
 
 foreach (var packet in packetKinds) {
-    WritePacketKind(source, packet);
+    WritePacketKind(packet);
 }
 
 // Create file
@@ -86,7 +89,7 @@ catch {
     Console.WriteLine("File successfully generated. Please copy to `lib` directory manually.");
 }
 
-#region METHODS
+#region PARSE METHODS
 PacketKind ParsePacketKind(ref PacketSourceReader reader)
 {
     PacketKind kind;
@@ -149,15 +152,118 @@ BitmaskPart ParseBitmask(ref PacketSourceReader reader)
 
     return bitmask;
 }
+#endregion
 
-void WritePacketKind(StringBuilder source, PacketKind packet)
+#region WRITE METHODS
+void WritePacketKindEnum()
 {
+    StringBuilder values = new();
+    foreach (var packet in packetKinds) {
+        if (packet.Comment != null) {
+            values.AppendLine($"    /// <summary>{packet.Comment}</summary>");
+        }
+        values.AppendLine($"    {packet.Name} = {packet.Value},");
+    }
+    source.AppendLine($$"""
+public enum PacketKind : ushort
+{
+{{values}}
+}
+
+""");
+}
+
+void WritePacketsClass()
+{
+    StringBuilder cases = new();
+    foreach (var packet in packetKinds) {
+        cases.AppendLine($"                case {packet.Value}: {packet.Name}.Queue.Enqueue(data.Read<{packet.Name}>()); break;");
+    }
+    source.AppendLine($$"""
+public static partial class Packets
+{
+    public static void QueuePacket(NetPacketReader data, BepInEx.Logging.ManualLogSource logger)
+    {
+        QueuePacket(data, error => logger.LogWarning(error));
+    }
+
+    public static void QueuePacket(NetPacketReader data, Action<string> error)
+    {
+        try {
+            ushort type = data.GetUShort();
+
+            switch (type) {
+{{cases}}
+                default: error($"Invalid packet type: 0x{type:X}"); break;
+            }
+
+            if (data.AvailableBytes > 0) {
+                error($"Packet is {data.AvailableBytes} bytes too large");
+            }
+        }
+        catch (ArgumentException) {
+            error($"Packet is too small");
+        }
+    }
+}
+
+""");
+}
+
+void WritePacketKind(PacketKind packet)
+{
+    StringBuilder parameters = new();
+    for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
+        parameters.Append($"{fields[i].TypeCsharp()} {fields[i].Name}");
+        if (i < packet.FieldEnd - 1) {
+            parameters.Append(", ");
+        }
+    }
+
+    StringBuilder deserializeContents = new();
+    for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
+        deserializeContents.AppendLine($"        {fields[i].Name} = reader.{fields[i].DeserializeCall()};");
+    }
+
+    StringBuilder serializeContents = new();
+    for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
+        serializeContents.AppendLine($"        writer.Put({fields[i].Name});");
+    }
+
+    StringBuilder bitmaskMethods = new();
+    for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
+        if (fields[i].BitmaskStart == fields[i].BitmaskEnd) continue;
+
+        // Generate ToBitmask methods
+        bitmaskMethods.Append($"\r\n\r\n    public static {fields[i].TypeCsharp()} To{fields[i].Name}(");
+        for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
+            bitmaskMethods.Append($"bool {bitmasks[j].Name}");
+            if (j < fields[i].BitmaskEnd - 1) {
+                bitmaskMethods.Append(", ");
+            }
+        }
+        bitmaskMethods.Append($")\r\n    {{\r\n        return ({fields[i].TypeCsharp()})(");
+        for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
+            bitmaskMethods.Append($"({bitmasks[j].Name} ? {bitmasks[j].Value} : 0)");
+            if (j < fields[i].BitmaskEnd - 1) {
+                bitmaskMethods.Append(" | ");
+            }
+        }
+        bitmaskMethods.AppendLine(");\r\n    }");
+        bitmaskMethods.AppendLine();
+
+        // Generate helper properties
+        for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
+            bitmaskMethods.AppendLine($"    public bool {bitmasks[j].Name} => ({fields[i].Name} & {bitmasks[j].Value}) != 0;");
+        }
+    }
+
     if (packet.Comment != null) {
         source.AppendLine($"/// <summary>{packet.Comment}</summary>");
     }
 
     source.AppendLine($$"""
-public record struct {{packet.Name}}({{Params()}}) : IPacket
+public record struct {{packet.Name}}({{parameters}}) : IPacket
 {
     public static PacketQueue<{{packet.Name}}> Queue { get; } = new();
 
@@ -165,81 +271,16 @@ public record struct {{packet.Name}}({{Params()}}) : IPacket
 
     public void Deserialize(NetDataReader reader)
     {
-{{Deserialize()}}
+{{deserializeContents}}
     }
 
     public void Serialize(NetDataWriter writer)
     {
-{{Serialize()}}
-    }{{Bitmask()}}
+{{serializeContents}}
+    }{{bitmaskMethods}}
 }
 
 """);
-
-    StringBuilder Params()
-    {
-        StringBuilder sb = new();
-        for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
-            sb.Append($"{fields[i].TypeCsharp()} {fields[i].Name}");
-            if (i < packet.FieldEnd - 1) {
-                sb.Append(", ");
-            }
-        }
-        return sb;
-    }
-
-    string Deserialize()
-    {
-        StringBuilder sb = new();
-        for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
-            sb.AppendLine($"        {fields[i].Name} = reader.{fields[i].DeserializeCall()};");
-        }
-        return sb.ToString().TrimEnd();
-    }
-
-    string Serialize()
-    {
-        StringBuilder sb = new();
-        for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
-            sb.AppendLine($"        writer.Put({fields[i].Name});");
-        }
-        return sb.ToString().TrimEnd();
-    }
-
-    StringBuilder Bitmask()
-    {
-        StringBuilder sb = new();
-        for (int i = packet.FieldStart; i < packet.FieldEnd; i++) {
-            if (fields[i].BitmaskStart == fields[i].BitmaskEnd) continue;
-
-            // Generate ToBitmask methods
-            sb.Append($"\r\n\r\n    public static {fields[i].TypeCsharp()} To{fields[i].Name}(");
-            for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
-                sb.Append($"bool {bitmasks[j].Name}");
-                if (j < fields[i].BitmaskEnd - 1) {
-                    sb.Append(", ");
-                }
-            }
-            sb.Append($")\r\n    {{\r\n        return ({fields[i].TypeCsharp()})(");
-            for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
-                sb.Append($"({bitmasks[j].Name} ? {bitmasks[j].Value} : 0)");
-                if (j < fields[i].BitmaskEnd - 1) {
-                    sb.Append(" | ");
-                }
-            }
-            sb.AppendLine(");\r\n    }");
-            sb.AppendLine();
-
-            // Generate helper properties
-            for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
-                sb.Append($"    public bool {bitmasks[j].Name} => ({fields[i].Name} & {bitmasks[j].Value}) != 0;");
-                if (j < fields[i].BitmaskEnd - 1) {
-                    sb.AppendLine();
-                }
-            }
-        }
-        return sb;
-    }
 }
 #endregion
 

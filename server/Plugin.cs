@@ -48,13 +48,13 @@ sealed partial class Plugin : BaseUnityPlugin
         EventBasedNetListener listener = new();
         NetManager server = new(listener) { AutoRecycle = true };
 
+        listener.NetworkReceiveEvent += (peer, data, method) => Packets.QueuePacket(data, Log);
         listener.ConnectionRequestEvent += request => {
             if (server.ConnectedPeersCount < Variables.MaxConnections)
                 request.AcceptIfKey(Variables.ConnectionKey);
             else
                 request.Reject();
         };
-
         listener.PeerConnectedEvent += peer => {
             DateTime now = DateTime.UtcNow;
             Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
@@ -65,7 +65,6 @@ sealed partial class Plugin : BaseUnityPlugin
                 peer.Send(packet, DeliveryMethod.ReliableOrdered);
             }
         };
-
         listener.PeerDisconnectedEvent += (peer, info) => {
             Log.LogDebug($"Disconnected from {peer.EndPoint.Address}: {info.Reason}");
         };

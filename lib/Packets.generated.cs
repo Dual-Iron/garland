@@ -1,4 +1,6 @@
+using LiteNetLib;
 using LiteNetLib.Utils;
+using System;
 
 namespace Common;
 
@@ -14,6 +16,39 @@ public enum PacketKind : ushort
     SyncDeathRain = 0x202,
     /// <summary>Sent after each time AntiGravity toggles on or off. Progress is set to 0 each time the packet is received.</summary>
     SyncAntiGrav = 0x203,
+
+}
+
+public static partial class Packets
+{
+    public static void QueuePacket(NetPacketReader data, BepInEx.Logging.ManualLogSource logger)
+    {
+        QueuePacket(data, error => logger.LogWarning(error));
+    }
+
+    public static void QueuePacket(NetPacketReader data, Action<string> error)
+    {
+        try {
+            ushort type = data.GetUShort();
+
+            switch (type) {
+                case 0x100: Input.Queue.Enqueue(data.Read<Input>()); break;
+                case 0x200: EnterSession.Queue.Enqueue(data.Read<EnterSession>()); break;
+                case 0x201: SyncRain.Queue.Enqueue(data.Read<SyncRain>()); break;
+                case 0x202: SyncDeathRain.Queue.Enqueue(data.Read<SyncDeathRain>()); break;
+                case 0x203: SyncAntiGrav.Queue.Enqueue(data.Read<SyncAntiGrav>()); break;
+
+                default: error($"Invalid packet type: 0x{type:X}"); break;
+            }
+
+            if (data.AvailableBytes > 0) {
+                error($"Packet is {data.AvailableBytes} bytes too large");
+            }
+        }
+        catch (ArgumentException) {
+            error($"Packet is too small");
+        }
+    }
 }
 
 /// <summary>Sent to the server any time the client's input changes.</summary>
