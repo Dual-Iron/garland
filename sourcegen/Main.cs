@@ -19,6 +19,7 @@ Input = 0x100 {
 EnterSession = 0x200 {
     u8  SlugcatWorld
     u16 RainbowSeed
+    i32 PlayerID
     str StartingRoom
 }
 

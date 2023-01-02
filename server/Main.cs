@@ -51,8 +51,12 @@ partial class Main
             DateTime now = DateTime.UtcNow;
             Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
-            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game) {
-                EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, ServerConfig.StartingRoom);
+            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
+                var player = session.Join(peer, peer.EndPoint.ToString());
+                player.Room.AddEntity(player);
+                player.RealizeInRoom();
+
+                EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, player.ID.number, ServerConfig.StartingRoom);
 
                 peer.Send(packet, DeliveryMethod.ReliableOrdered);
             }

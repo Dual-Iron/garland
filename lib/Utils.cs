@@ -11,4 +11,9 @@ public static class Utils
     {
         return Directory.Exists(BepInEx.Utility.CombinePaths(path));
     }
+
+    public static PlayerState PlayerState(this AbstractCreature creature)
+    {
+        return (PlayerState)creature.state;
+    }
 }

@@ -8,11 +8,11 @@ public enum PacketKind : ushort
 {
     /// <summary>Sent to the server any time the client's input changes.</summary>
     Input = 0x100,
-    /// <summary>Sent to a client after they join the game and begin a RainWorldGame instance.</summary>
+    /// <summary>Sent when the server begins a game session, and to joining clients.</summary>
     EnterSession = 0x200,
-    /// <summary>Sent every two seconds, after `GlobalRain.rainDirectionGetTo` changes, and to newly-connected clients. Flood speed is a constant 0.2.</summary>
+    /// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.2.</summary>
     SyncRain = 0x201,
-    /// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and to newly-connected clients. Only sent after death rain begins.</summary>
+    /// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.</summary>
     SyncDeathRain = 0x202,
     /// <summary>Sent after each time AntiGravity toggles on or off. Progress is set to 0 each time the packet is received.</summary>
     SyncAntiGrav = 0x203,
@@ -46,7 +46,7 @@ public static partial class Packets
             }
         }
         catch (ArgumentException) {
-            error($"Packet is too small");
+            error("Packet is too small");
         }
     }
 }
@@ -63,6 +63,7 @@ public record struct Input(float X, float Y, byte Bitmask) : IPacket
         X = reader.GetFloat();
         Y = reader.GetFloat();
         Bitmask = reader.GetByte();
+
     }
 
     public void Serialize(NetDataWriter writer)
@@ -70,6 +71,7 @@ public record struct Input(float X, float Y, byte Bitmask) : IPacket
         writer.Put(X);
         writer.Put(Y);
         writer.Put(Bitmask);
+
     }
 
     public static byte ToBitmask(bool Jump, bool Throw, bool Pickup, bool Point)
@@ -81,10 +83,11 @@ public record struct Input(float X, float Y, byte Bitmask) : IPacket
     public bool Throw => (Bitmask & 0x2) != 0;
     public bool Pickup => (Bitmask & 0x4) != 0;
     public bool Point => (Bitmask & 0x8) != 0;
+
 }
 
-/// <summary>Sent to a client after they join the game and begin a RainWorldGame instance.</summary>
-public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, string StartingRoom) : IPacket
+/// <summary>Sent when the server begins a game session, and to joining clients.</summary>
+public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int PlayerID, string StartingRoom) : IPacket
 {
     public static PacketQueue<EnterSession> Queue { get; } = new();
 
@@ -94,18 +97,22 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, string 
     {
         SlugcatWorld = reader.GetByte();
         RainbowSeed = reader.GetUShort();
+        PlayerID = reader.GetInt();
         StartingRoom = reader.GetString();
+
     }
 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(SlugcatWorld);
         writer.Put(RainbowSeed);
+        writer.Put(PlayerID);
         writer.Put(StartingRoom);
+
     }
 }
 
-/// <summary>Sent every two seconds, after `GlobalRain.rainDirectionGetTo` changes, and to newly-connected clients. Flood speed is a constant 0.2.</summary>
+/// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.2.</summary>
 public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainDirection, float RainDirectionGetTo) : IPacket
 {
     public static PacketQueue<SyncRain> Queue { get; } = new();
@@ -118,6 +125,7 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
         RainTimerMax = reader.GetUShort();
         RainDirection = reader.GetFloat();
         RainDirectionGetTo = reader.GetFloat();
+
     }
 
     public void Serialize(NetDataWriter writer)
@@ -126,10 +134,11 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
         writer.Put(RainTimerMax);
         writer.Put(RainDirection);
         writer.Put(RainDirectionGetTo);
+
     }
 }
 
-/// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and to newly-connected clients. Only sent after death rain begins.</summary>
+/// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.</summary>
 public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, float Progression, float CalmBeforeSunlight) : IPacket
 {
     public static PacketQueue<SyncDeathRain> Queue { get; } = new();
@@ -142,6 +151,7 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
         TimeInThisMode = reader.GetFloat();
         Progression = reader.GetFloat();
         CalmBeforeSunlight = reader.GetFloat();
+
     }
 
     public void Serialize(NetDataWriter writer)
@@ -150,6 +160,7 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
         writer.Put(TimeInThisMode);
         writer.Put(Progression);
         writer.Put(CalmBeforeSunlight);
+
     }
 }
 
@@ -166,6 +177,7 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
         Counter = reader.GetUShort();
         From = reader.GetFloat();
         To = reader.GetFloat();
+
     }
 
     public void Serialize(NetDataWriter writer)
@@ -174,6 +186,7 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
         writer.Put(Counter);
         writer.Put(From);
         writer.Put(To);
+
     }
 }
 
