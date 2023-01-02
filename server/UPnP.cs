@@ -52,7 +52,7 @@ static public class Upnp
 
     static void Response()
     {
-        Plugin.Log.LogDebug($"Started attempt to open port {Port}");
+        Main.Log.LogDebug($"Started attempt to open port {Port}");
 
         bool finished = false;
 
@@ -131,18 +131,18 @@ static public class Upnp
                 }
             }
             catch (Exception e) {
-                Plugin.Log.LogError($"UPnP error: {e.Message}");
+                Main.Log.LogError($"UPnP error: {e.Message}");
             }
 
             if (++tries > 10) {
                 State = UpnpState.Error;
-                Plugin.Log.LogDebug($"Ceased attempt to open port {Port}");
+                Main.Log.LogDebug($"Ceased attempt to open port {Port}");
                 return;
             }
         }
 
         State = UpnpState.Finished;
-        Plugin.Log.LogDebug($"Successfully opened port {Port}");
+        Main.Log.LogDebug($"Successfully opened port {Port}");
     }
 
     static void GetMappings()

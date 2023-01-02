@@ -6,25 +6,41 @@ using System;
 
 namespace Client;
 
-sealed partial class Plugin
+partial class Main
 {
-    private static void SessionHooks()
+    private void SessionHooks()
     {
+        On.RainWorldGame.Update += ExitOnDisconnect;
+        On.RainWorldGame.ExitToMenu += DisconnectOnExit;
+
         // Prevent errors and abnormal behavior with custom session type
         On.OverWorld.ctor += OverWorld_ctor;
         On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.World.ctor += World_ctor;
-        IL.RainWorldGame.Update += RainWorldGame_Update; // Custom pause menu logic
-        IL.RainWorldGame.GrafUpdate += RainWorldGame_GrafUpdate; // Custom pause menu logic
+        IL.RainWorldGame.Update += FixPauseAndCrash; // Custom pause menu logic
+        IL.RainWorldGame.GrafUpdate += FixPause; // Custom pause menu logic
 
         // Decentralize RoomCamera.followAbstractCreature
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
-
-        // Fix pausing
-        On.RainWorldGame.ExitToMenu += RainWorldGame_ExitToMenu;
     }
 
-    private static void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
+    private void ExitOnDisconnect(On.RainWorldGame.orig_Update orig, RainWorldGame self)
+    {
+        if (self.session is ClientSession && ClientState is not ConnectionState.Connected && self.manager.upcomingProcess == null) {
+            self.ExitToMenu();
+        }
+        orig(self);
+    }
+
+    private void DisconnectOnExit(On.RainWorldGame.orig_ExitToMenu orig, RainWorldGame self)
+    {
+        if (self.session is ClientSession) {
+            StopClient();
+        }
+        orig(self);
+    }
+
+    private void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
         if (startPacket is EnterSession session) {
             game.session = new ClientSession(session.SlugcatWorld, game);
@@ -34,7 +50,7 @@ sealed partial class Plugin
         orig(self, game);
     }
 
-    private static void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
+    private void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
     {
         if (self.game?.session is not ClientSession || !startPacket.HasValue) {
             orig(self);
@@ -58,7 +74,7 @@ sealed partial class Plugin
         self.FIRSTROOM = startingRoom;
     }
 
-    private static void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
+    private void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
     {
         if (game?.session is not ClientSession) {
             orig(self, game, region, name, singleRoomWorld);
@@ -73,7 +89,7 @@ sealed partial class Plugin
     }
 
     // TODO make follow assigned slugcat
-    private static void RainWorldGame_Update(ILContext il)
+    private void FixPauseAndCrash(ILContext il)
     {
         ILCursor cursor = new(il);
 
@@ -106,7 +122,7 @@ sealed partial class Plugin
         }
     }
 
-    private static void RainWorldGame_GrafUpdate(ILContext il)
+    private void FixPause(ILContext il)
     {
         ILCursor cursor = new(il);
 
@@ -128,7 +144,7 @@ sealed partial class Plugin
         }
     }
 
-    private static void RainWorldGame_ctor(ILContext il)
+    private void RainWorldGame_ctor(ILContext il)
     {
         ILCursor cursor = new(il);
 
@@ -153,13 +169,5 @@ sealed partial class Plugin
         {
             return orig != null || game.session is ClientSession;
         }
-    }
-
-    private static void RainWorldGame_ExitToMenu(On.RainWorldGame.orig_ExitToMenu orig, RainWorldGame self)
-    {
-        if (self.session is ClientSession) {
-            StopClient();
-        }
-        orig(self);
     }
 }

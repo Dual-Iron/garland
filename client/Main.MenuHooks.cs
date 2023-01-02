@@ -5,19 +5,19 @@ using System.Linq;
 
 namespace Client;
 
-sealed partial class Plugin
+partial class Main
 {
     const string signal = "GARLAND_ONLINE";
     const ProcessManager.ProcessID onlineMenu = (ProcessManager.ProcessID)(-10933);
 
-    private static void MenuHooks()
+    private void MenuHooks()
     {
         On.Menu.MainMenu.ctor += ReplaceSingleplayerButton;
         On.Menu.MainMenu.Singal += MainMenu_Singal;
         IL.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
     }
 
-    private static void ReplaceSingleplayerButton(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
+    private void ReplaceSingleplayerButton(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
     {
         orig(self, manager, showRegionSpecificBkg);
 
@@ -43,7 +43,7 @@ sealed partial class Plugin
             Log.LogError("MULTI PLAYER button not added to main menu!");
     }
 
-    private static void MainMenu_Singal(On.Menu.MainMenu.orig_Singal orig, MainMenu self, MenuObject sender, string message)
+    private void MainMenu_Singal(On.Menu.MainMenu.orig_Singal orig, MainMenu self, MenuObject sender, string message)
     {
         if (message == signal) {
             self.manager.RequestMainProcessSwitch(onlineMenu);
@@ -54,7 +54,7 @@ sealed partial class Plugin
         }
     }
 
-    private static void ProcessManager_SwitchMainProcess(ILContext il)
+    private void ProcessManager_SwitchMainProcess(ILContext il)
     {
         ILCursor cursor = new(il);
 
@@ -66,7 +66,7 @@ sealed partial class Plugin
         cursor.EmitDelegate(SwitchToCustomProcess);
     }
 
-    private static void SwitchToCustomProcess(ProcessManager pm, ProcessManager.ProcessID pid)
+    private void SwitchToCustomProcess(ProcessManager pm, ProcessManager.ProcessID pid)
     {
         if (pid == onlineMenu) {
             pm.currentMainLoop = new Menus.OnlineMenu(pm, onlineMenu);

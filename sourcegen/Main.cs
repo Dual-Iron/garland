@@ -15,14 +15,14 @@ Input = 0x100 {
     u8  Bitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8 }
 }
 
-# Sent to a client after they join the game and begin a RainWorldGame instance.
+# Sent when the server begins a game session, and to joining clients.
 EnterSession = 0x200 {
     u8  SlugcatWorld
     u16 RainbowSeed
     str StartingRoom
 }
 
-# Sent every two seconds, after `GlobalRain.rainDirectionGetTo` changes, and to newly-connected clients. Flood speed is a constant 0.2.
+# Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.2.
 SyncRain = 0x201 {
     u16 RainTimer
     u16 RainTimerMax
@@ -30,7 +30,7 @@ SyncRain = 0x201 {
     f32 RainDirectionGetTo
 }
 
-# Sent every two seconds, after `DeathRain.deathRainMode` changes, and to newly-connected clients. Only sent after death rain begins.
+# Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.
 SyncDeathRain = 0x202 {
     u8  DeathRainMode
     f32 TimeInThisMode

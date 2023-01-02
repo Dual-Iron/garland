@@ -7,9 +7,9 @@ using UnityEngine;
 
 namespace Server;
 
-sealed partial class Plugin
+partial class Main
 {
-    private static void GameHooks()
+    private void SessionHooks()
     {
         // Just debug stuff
         On.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
@@ -27,19 +27,19 @@ sealed partial class Plugin
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
-    private static void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
+    private void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
     {
         orig(self, ID);
 
         Log.LogDebug($"Switched process to {ID}");
     }
 
-    private static RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
+    private RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
     {
         return orig(distributionBuild) with { startScreen = false, playMusic = false };
     }
 
-    private static void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
+    private void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
         game.session = new ServerSession(ServerConfig.SlugcatWorld, game);
         game.startingRoom = ServerConfig.StartingRoom;
@@ -47,7 +47,7 @@ sealed partial class Plugin
         orig(self, game);
     }
 
-    private static void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
+    private void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
     {
         string startingRoom = self.game.startingRoom;
         string[] split = startingRoom.Split('_');
@@ -66,7 +66,7 @@ sealed partial class Plugin
         self.FIRSTROOM = startingRoom;
     }
 
-    private static void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
+    private void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
     {
         orig(self, null, region, name, singleRoomWorld);
 
@@ -77,7 +77,7 @@ sealed partial class Plugin
         }
     }
 
-    private static void RainWorldGame_Update(ILContext il)
+    private void RainWorldGame_Update(ILContext il)
     {
         ILCursor cursor = new(il);
 
@@ -87,7 +87,7 @@ sealed partial class Plugin
         cursor.Emit(OpCodes.Ldc_I4_1);
     }
 
-    private static void RainWorldGame_ctor(ILContext il)
+    private void RainWorldGame_ctor(ILContext il)
     {
         ILCursor cursor = new(il);
 

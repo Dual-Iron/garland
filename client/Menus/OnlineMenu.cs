@@ -38,7 +38,7 @@ sealed class OnlineMenu : Menu.Menu
             PlaySound(SoundID.MENU_Switch_Page_Out);
         }
         else if (sender == join) {
-            Plugin.StartConnecting("localhost", port);
+            Main.Instance.StartConnecting("localhost", port);
             PlaySound(SoundID.MENU_Start_New_Game);
         }
     }
@@ -47,17 +47,17 @@ sealed class OnlineMenu : Menu.Menu
     {
         base.Update();
 
-        bool greyed = Plugin.ClientState != ConnectionState.Disconnected;
+        bool greyed = Main.Instance.ClientState != ConnectionState.Disconnected;
 
         back.GetButtonBehavior.greyedOut = greyed;
         join.GetButtonBehavior.greyedOut = greyed;
 
-        if (EnterSession.Queue.Drain() is EnterSession session) {
-            Plugin.startPacket = session;
+        if (EnterSession.Queue.Latest(out var packet)) {
+            Main.Instance.startPacket = packet;
         }
 
-        if (manager.upcomingProcess == null && Plugin.ClientState == ConnectionState.Connected && Plugin.startPacket is EnterSession s) {
-            Plugin.Log.LogDebug($"OK to enter game: {s}");
+        if (manager.upcomingProcess == null && Main.Instance.ClientState == ConnectionState.Connected && Main.Instance.startPacket is EnterSession s) {
+            Main.Log.LogDebug($"OK to enter game: {s}");
 
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
             manager.menuSetup.startGameCondition = (ProcessManager.MenuSetup.StoryGameInitCondition)(-40);
