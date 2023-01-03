@@ -7,6 +7,15 @@ using System.Text;
 // Server -> Client messages are in the 0x200 – 0x2FF range
 // string end in newline
 
+// TODO IMMEDIATELY NEXT: Sync basic creature information.
+// ID, Type, Pos, Alive, MeatLeft
+
+// Then, some creatures have specific information that's sent every time they're introduced to the client.
+// Players: ID, SharedPlayerData
+
+// Then, some creatures have information that is constantly shared with players.
+// PLAYER INPUT (clients should ignore their own though), pathfinding, body chunk positions
+
 const string PACKETS = """
 # Sent to the server any time the client's input changes.
 Input = 0x100 {
@@ -15,11 +24,11 @@ Input = 0x100 {
     u8  Bitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8 }
 }
 
-# Sent when the server begins a game session, and to joining clients.
+# Sent to clients joining a game session.
 EnterSession = 0x200 {
     u8  SlugcatWorld
     u16 RainbowSeed
-    i32 PlayerID
+    i32 ClientPid
     str StartingRoom
 }
 

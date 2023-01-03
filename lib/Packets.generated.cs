@@ -87,7 +87,7 @@ public record struct Input(float X, float Y, byte Bitmask) : IPacket
 }
 
 /// <summary>Sent when the server begins a game session, and to joining clients.</summary>
-public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int PlayerID, string StartingRoom) : IPacket
+public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int ClientPid, string StartingRoom) : IPacket
 {
     public static PacketQueue<EnterSession> Queue { get; } = new();
 
@@ -97,7 +97,7 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Pla
     {
         SlugcatWorld = reader.GetByte();
         RainbowSeed = reader.GetUShort();
-        PlayerID = reader.GetInt();
+        ClientPid = reader.GetInt();
         StartingRoom = reader.GetString();
 
     }
@@ -106,7 +106,7 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Pla
     {
         writer.Put(SlugcatWorld);
         writer.Put(RainbowSeed);
-        writer.Put(PlayerID);
+        writer.Put(ClientPid);
         writer.Put(StartingRoom);
 
     }

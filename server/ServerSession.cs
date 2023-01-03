@@ -2,6 +2,7 @@
 using LiteNetLib;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace Server;
 
@@ -26,7 +27,7 @@ sealed class ServerSession : GameSession
     // They start at 0 and increase from there, so they can be accessed in a list.
     // All players in this list are represented as abstract creatures. Even disconnected players are present, but unconscious. Disconnected players might not realize rooms, though.
     // Saved to disk.
-    readonly List<PlayerData> playersData = new();
+    readonly List<ServerPlayerData> serverData = new();
 
     // TODO: A player's hash will be given by SHA256(username, password).
     // Saved to disk.
@@ -41,14 +42,14 @@ sealed class ServerSession : GameSession
     {
         // Create player's PID if it doesn't exist
         if (!hashToPid.TryGetValue(hash, out int pid)) {
-            hashToPid[hash] = pid = playersData.Count;
+            hashToPid[hash] = pid = serverData.Count;
 
-            playersData.Add(PlayerData.Generate(this, hash));
+            serverData.Add(ServerPlayerData.Generate(this, hash));
 
             // TODO: then save immediately
 
             // Create new abstract player and add it
-            PlayerData data = playersData[pid];
+            ServerPlayerData data = serverData[pid];
             EntityID id = new(-1, pid); // TODO: other objects' IDs start at 1000, so this is a safe bet.. for now. Make IDs start at 100,000 later.
             AbstractCreature player = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, data.pos, id);
             player.state = new PlayerState(player, pid, 0, false);
@@ -74,65 +75,71 @@ sealed class ServerSession : GameSession
 
     public override void AddPlayer(AbstractCreature player)
     {
-        if (player.PlayerState().playerNumber != -1) {
+        if (player.PlayerState().playerNumber == -1) {
+            base.AddPlayer(player);
+        }
+        else {
             throw new System.ArgumentException($"Players with no associated client must have a playerNumber of -1.");
         }
-        base.AddPlayer(player);
     }
 
-    public PlayerData GetPlayerData(int pid) => playersData[pid];
-    public PlayerData GetPlayerData(EntityID eid) => playersData[eid.number];
-    public PlayerData GetPlayerData(AbstractCreature player) => playersData[player.ID.number];
-    public PlayerData GetPlayerData(NetPeer peer)
+    public SharedPlayerData GetPlayerData(int pid)
     {
-        if (!peers.TryGetValue(peer.Id, out PeerData data)) {
-            throw new System.ArgumentException("Peer does not have any associated player; call ServerSession::Join before using ServerSession::GetPlayer.");
+        if (pid >= 0 && pid < serverData.Count) {
+            return serverData[pid].shared;
         }
-        return playersData[data.Pid];
+        return new();
+    }
+    public SharedPlayerData GetPlayerData(EntityID eid) => GetPlayerData(eid.number);
+    public SharedPlayerData GetPlayerData(AbstractCreature player) => GetPlayerData(player.ID.number);
+    public ServerPlayerData GetPlayerData(NetPeer peer)
+    {
+        if (peers.TryGetValue(peer.Id, out PeerData data)) {
+            return serverData[data.Pid];
+        }
+        throw new System.ArgumentException("Peer does not have any associated player; call ServerSession::Join before using ServerSession::GetPlayer.");
     }
 
     public AbstractCreature GetPlayer(NetPeer peer)
     {
-        if (!peers.TryGetValue(peer.Id, out PeerData data)) {
-            throw new System.ArgumentException("Peer does not have any associated player; call ServerSession::Join before using ServerSession::GetPlayer.");
+        if (peers.TryGetValue(peer.Id, out PeerData data)) {
+            return Players[data.Pid];
         }
-        return Players[data.Pid];
-    }
-    public AbstractCreature GetPlayer(EntityID eid)
-    {
-        if (eid.number >= 0 && eid.number < Players.Count) {
-            return Players[eid.number];
-        }
-        return Players.First(p => p.ID == eid);
+        throw new System.ArgumentException("Peer does not have any associated player; call ServerSession::Join before using ServerSession::GetPlayer.");
     }
 }
 
 static class SessionExt
 {
-    public static PlayerData Data(this Player player)
+    public static SharedPlayerData Data(this Player player)
     {
-        var session = (ServerSession)player.abstractCreature.world.game.session;
+        var session = (ServerSession)player.abstractPhysicalObject.world.game.session;
 
-        return session.GetPlayerData(player.abstractCreature.ID.number);
+        return session.GetPlayerData(player.abstractPhysicalObject.ID.number);
     }
 }
 
-sealed class PlayerData
+sealed class ServerPlayerData
 {
     public WorldCoordinate pos;
-    public SlugcatStats stats;
+    public SharedPlayerData shared = new();
 
-    private PlayerData(WorldCoordinate pos, SlugcatStats stats)
+    public static ServerPlayerData Generate(ServerSession session, string hash)
     {
-        this.pos = pos;
-        this.stats = stats;
-    }
+        int hashCode = hash.GetHashCode();
 
-    public static PlayerData Generate(ServerSession session, string hash)
-    {
-        return new(
-            new WorldCoordinate(session.game.world.GetAbstractRoom(ServerConfig.StartingRoom).index, 5, 5, -1),
-            new SlugcatStats(slugcatNumber: 0, malnourished: false)
-        );
+        float hue = Mathf.Pow(Utils.SeededRandom(hashCode), 3f); // Pow to make hotter colors more common
+        float saturation = 0.6f + 0.4f * Utils.SeededRandom(hashCode);
+        float luminosity = 0.8f + 0.2f * Utils.SeededRandom(hashCode);
+
+        Color color = RXColor.ColorFromHSL(hue, saturation, luminosity);
+
+        return new() {
+            pos = new WorldCoordinate(session.game.world.GetAbstractRoom(ServerConfig.StartingRoom).index, 5, 5, -1),
+            shared = new() {
+                stats = new SlugcatStats(slugcatNumber: 0, malnourished: false),
+                skinColor = color,
+            }
+        };
     }
 }

@@ -6,7 +6,7 @@ namespace Client.Menus;
 
 sealed class OnlineMenu : Menu.Menu
 {
-    const int port = Variables.DefaultPort;
+    const int port = Utils.DefaultPort;
 
     readonly SimpleButton back;
     readonly SimpleButton join;

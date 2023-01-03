@@ -1,6 +1,7 @@
 ﻿using Common;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using MonoMod.RuntimeDetour;
 using RWCustom;
 using System;
 
@@ -10,6 +11,11 @@ partial class Main
 {
     private void SessionHooks()
     {
+        // Fix SlugcatStats access
+        new Hook(typeof(Player).GetMethod("get_slugcatStats"), getSlugcatStats);
+        new Hook(typeof(Player).GetMethod("get_Malnourished"), getMalnourished);
+
+        // Fix disconnections
         On.RainWorldGame.Update += ExitOnDisconnect;
         On.RainWorldGame.ExitToMenu += DisconnectOnExit;
 
@@ -24,9 +30,13 @@ partial class Main
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
+    private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => self.Data().stats;
+
+    private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
+
     private void ExitOnDisconnect(On.RainWorldGame.orig_Update orig, RainWorldGame self)
     {
-        if (self.session is ClientSession && ClientState is not ConnectionState.Connected && self.manager.upcomingProcess == null) {
+        if (self.session is ClientSession && ClientState != ConnectionState.Connected && self.manager.upcomingProcess == null) {
             self.ExitToMenu();
         }
         orig(self);
@@ -43,7 +53,7 @@ partial class Main
     private void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
         if (startPacket is EnterSession session) {
-            game.session = new ClientSession(session.SlugcatWorld, game);
+            game.session = new ClientSession(session.SlugcatWorld, session.ClientPid, game);
             game.startingRoom = session.StartingRoom;
         }
 

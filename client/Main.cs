@@ -43,7 +43,7 @@ partial class Main
 
         ClientState = ConnectionState.Connecting;
         Client.Start();
-        Client.Connect(address, port, Variables.ConnectionKey);
+        Client.Connect(address, port, Utils.ConnectionKey);
 
         Log.LogDebug($"Connecting to {address}:{port}");
     }

@@ -1,6 +1,7 @@
 ﻿using Common;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using MonoMod.RuntimeDetour;
 using RWCustom;
 using System;
 using UnityEngine;
@@ -11,6 +12,10 @@ partial class Main
 {
     private void SessionHooks()
     {
+        // Fix SlugcatStats access
+        new Hook(typeof(Player).GetMethod("get_slugcatStats"), getSlugcatStats);
+        new Hook(typeof(Player).GetMethod("get_Malnourished"), getMalnourished);
+
         // Just debug stuff
         On.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
 
@@ -26,6 +31,10 @@ partial class Main
         // Decentralize RoomCamera.followAbstractCreature
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
+
+    private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => self.Data().stats;
+
+    private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
 
     private void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
     {

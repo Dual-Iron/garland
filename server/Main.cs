@@ -18,7 +18,7 @@ partial class Main
     public Main()
     {
         // Parse command-line args
-        int port = Variables.DefaultPort;
+        int port = Utils.DefaultPort;
 
         foreach (string arg in Environment.GetCommandLineArgs()) {
             if (arg.StartsWith("-port=") && ushort.TryParse(arg.Substring("-port=".Length), out ushort newPort)) {
@@ -26,7 +26,7 @@ partial class Main
             }
         }
 
-        if (port != Variables.DefaultPort) {
+        if (port != Utils.DefaultPort) {
             Log.LogDebug($"Using non-standard port: {port}");
         }
 
@@ -40,8 +40,8 @@ partial class Main
 
         listener.NetworkReceiveEvent += (peer, data, method) => Packets.QueuePacket(data, Log);
         listener.ConnectionRequestEvent += request => {
-            if (server.ConnectedPeersCount < Variables.MaxConnections)
-                request.AcceptIfKey(Variables.ConnectionKey);
+            if (server.ConnectedPeersCount < Utils.MaxConnections)
+                request.AcceptIfKey(Utils.ConnectionKey);
             else
                 request.Reject();
         };
