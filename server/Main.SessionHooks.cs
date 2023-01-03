@@ -90,7 +90,19 @@ partial class Main
     {
         ILCursor cursor = new(il);
 
-        // Load rooms like it's a story session (even though it's not)
+        // Realize rooms with custom logic
+        cursor.GotoNext(MoveType.Before, i => i.MatchLdfld<RainWorldGame>("roomRealizer"));
+        cursor.EmitDelegate(RoomRealizerHook);
+
+        static RainWorldGame RoomRealizerHook(RainWorldGame game)
+        {
+            if (game.session is ServerSession session) {
+                session.RoomRealizer.Update();
+            }
+            return game;
+        }
+
+        // Update rooms like it's a story session (even though it's not)
         cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
         cursor.Emit(OpCodes.Pop);
         cursor.Emit(OpCodes.Ldc_I4_1);

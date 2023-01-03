@@ -121,6 +121,18 @@ partial class Main
             return pauseMenu;
         }
 
+        // Realize rooms with custom logic
+        cursor.GotoNext(MoveType.Before, i => i.MatchLdfld<RainWorldGame>("roomRealizer"));
+        cursor.EmitDelegate(RoomRealizerHook);
+
+        static RainWorldGame RoomRealizerHook(RainWorldGame game)
+        {
+            if (game.session is ClientSession session) {
+                session.RoomRealizer.Update();
+            }
+            return game;
+        }
+
         // Load rooms like it's a story session (even though it's not)
         cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
         cursor.Emit(OpCodes.Ldarg_0);

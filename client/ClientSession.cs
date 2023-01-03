@@ -8,10 +8,12 @@ sealed class ClientSession : GameSession
     {
         SlugcatWorld = slugcatWorld;
         ClientPid = clientPid;
+        RoomRealizer = new(game, this);
     }
 
-    public byte SlugcatWorld { get; }
-    public int ClientPid { get; }
+    public readonly byte SlugcatWorld;
+    public readonly int ClientPid;
+    public readonly ClientRoomRealizer RoomRealizer;
 
     readonly Dictionary<int, int> pidToLocalID = new();
     readonly List<SharedPlayerData> clientData = new();

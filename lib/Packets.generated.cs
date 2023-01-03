@@ -16,6 +16,7 @@ public enum PacketKind : ushort
     SyncDeathRain = 0x202,
     /// <summary>Sent after each time AntiGravity toggles on or off. Progress is set to 0 each time the packet is received.</summary>
     SyncAntiGrav = 0x203,
+    RealizeRoom = 0x204,
 
 }
 
@@ -32,6 +33,7 @@ public static partial class Packets
                 case 0x201: SyncRain.Queue.Enqueue(sender, data.Read<SyncRain>()); break;
                 case 0x202: SyncDeathRain.Queue.Enqueue(sender, data.Read<SyncDeathRain>()); break;
                 case 0x203: SyncAntiGrav.Queue.Enqueue(sender, data.Read<SyncAntiGrav>()); break;
+                case 0x204: RealizeRoom.Queue.Enqueue(sender, data.Read<RealizeRoom>()); break;
 
                 default: error($"Invalid packet type: 0x{type:X}"); break;
             }
@@ -196,6 +198,28 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
         writer.Put(Counter);
         writer.Put(From);
         writer.Put(To);
+
+    }
+}
+
+public record struct RealizeRoom(int Index) : IPacket
+{
+    public static PacketQueue<RealizeRoom> Queue { get; } = new();
+
+    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
+    public static bool Latest(out RealizeRoom packet) => Queue.Latest(out _, out packet);
+
+    public PacketKind GetKind() => PacketKind.RealizeRoom;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        Index = reader.GetInt();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(Index);
 
     }
 }

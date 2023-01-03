@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-// Client -> Server messages are in the 0x100 – 0x1FF range
-// Server -> Client messages are in the 0x200 – 0x2FF range
-// string end in newline
+// 0x100 to 0x1FF: Packets sent FROM client TO server
+// 0x200 to 0x2FF: Packets sent FROM server TO client
 
 // TODO IMMEDIATELY NEXT: Sync basic creature information.
 // ID, Type, Pos, Alive, MeatLeft
@@ -56,7 +55,10 @@ SyncAntiGrav = 0x203 {
     f32  To
 }
 
-
+# Sent when the server decides that a client should realize a room if it hasn't already.
+RealizeRoom = 0x204 {
+    i32 Index
+}
 
 """;
 
@@ -348,6 +350,8 @@ struct PacketSourceReader
 
     int offset;
 
+    bool Whitespace() => offset < Text.Length && char.IsWhiteSpace(Text[offset]);
+
     public bool TextRemaining()
     {
         while (Whitespace()) offset += 1;
@@ -399,7 +403,5 @@ struct PacketSourceReader
         while (!Whitespace() && Text[offset] != ',') offset += 1;
         return Text[start..offset];
     }
-
-    bool Whitespace() => offset < Text.Length && char.IsWhiteSpace(Text[offset]);
 }
 #endregion
