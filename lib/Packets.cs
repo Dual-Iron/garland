@@ -9,6 +9,11 @@ public static partial class Packets
 {
     private static readonly NetDataWriter writer = new();
 
+    public static void QueuePacket(NetPeer sender, NetPacketReader data, BepInEx.Logging.ManualLogSource logger)
+    {
+        QueuePacket(sender, data, logger.LogWarning);
+    }
+
     public static void Send<T>(this NetPeer peer, T value, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered) where T : IPacket
     {
         writer.Reset();
@@ -33,42 +38,41 @@ public static partial class Packets
     }
 }
 
+// TODO: add a limit to PacketQueue after which old packets are dropped
 public sealed class PacketQueue<T> where T : struct
 {
-    readonly Queue<T> awaiting = new(16);
+    record struct ReceivedPacket(NetPeer Sender, T Packet);
 
-    /// <summary>
-    /// Enqueues one item.
-    /// </summary>
-    /// <param name="value">The item to add to the queue.</param>
-    public void Enqueue(T value) => awaiting.Enqueue(value);
+    readonly Queue<ReceivedPacket> awaiting = new(16);
 
-    /// <summary>
-    /// Dequeues one item.
-    /// </summary>
+    /// <summary>Enqueues one item.</summary>
+    /// <param name="value">The item to add.</param>
+    public void Enqueue(NetPeer sender, T value) => awaiting.Enqueue(new(sender, value));
+
+    /// <summary>Dequeues one item.</summary>
     /// <returns>The item that was least recently added.</returns>
-    public bool Dequeue(out T packet)
+    public bool Dequeue(out NetPeer sender, out T packet)
     {
         if (awaiting.Count == 0) {
+            sender = null!;
             packet = default;
             return false;
         }
-        packet = awaiting.Dequeue();
+        awaiting.Dequeue().Deconstruct(out sender, out packet);
         return true;
     }
 
-    /// <summary>
-    /// Drains the queue empty. Useful for ignoring all but the latest packet.
-    /// </summary>
+    /// <summary>Drains the queue empty. Useful for ignoring all but the latest packet.</summary>
     /// <returns>The item that was most recently added.</returns>
-    public bool Latest(out T packet)
+    public bool Latest(out NetPeer sender, out T packet)
     {
         if (awaiting.Count == 0) {
+            sender = default!;
             packet = default;
             return false;
         }
         while (awaiting.Count > 1) awaiting.Dequeue();
-        packet = awaiting.Dequeue();
+        awaiting.Dequeue().Deconstruct(out sender, out packet);
         return true;
     }
 }

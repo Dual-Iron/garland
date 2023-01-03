@@ -18,7 +18,7 @@ partial class Main
     public Main()
     {
         EventBasedNetListener listener = new();
-        listener.NetworkReceiveEvent += (peer, data, method) => Packets.QueuePacket(data, Log);
+        listener.NetworkReceiveEvent += (peer, data, method) => Packets.QueuePacket(peer, data, Log);
         listener.PeerConnectedEvent += p => {
             ClientState = ConnectionState.Connected;
             Log.LogDebug("Connected");

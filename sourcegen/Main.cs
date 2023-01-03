@@ -56,6 +56,8 @@ SyncAntiGrav = 0x203 {
     f32  To
 }
 
+
+
 """;
 
 // Parse packets into meaningful data
@@ -187,17 +189,12 @@ void WritePacketsClass()
 {
     StringBuilder cases = new();
     foreach (var packet in packetKinds) {
-        cases.AppendLine($"                case {packet.Value}: {packet.Name}.Queue.Enqueue(data.Read<{packet.Name}>()); break;");
+        cases.AppendLine($"                case {packet.Value}: {packet.Name}.Queue.Enqueue(sender, data.Read<{packet.Name}>()); break;");
     }
     source.AppendLine($$"""
 public static partial class Packets
 {
-    public static void QueuePacket(NetPacketReader data, BepInEx.Logging.ManualLogSource logger)
-    {
-        QueuePacket(data, error => logger.LogWarning(error));
-    }
-
-    public static void QueuePacket(NetPacketReader data, Action<string> error)
+    public static void QueuePacket(NetPeer sender, NetPacketReader data, Action<string> error)
     {
         try {
             ushort type = data.GetUShort();
@@ -276,6 +273,9 @@ void WritePacketKind(PacketKind packet)
 public record struct {{packet.Name}}({{parameters}}) : IPacket
 {
     public static PacketQueue<{{packet.Name}}> Queue { get; } = new();
+
+    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
+    public static bool Latest(out {{packet.Name}} packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.{{packet.Name}};
 

@@ -52,7 +52,7 @@ sealed class OnlineMenu : Menu.Menu
         back.GetButtonBehavior.greyedOut = greyed;
         join.GetButtonBehavior.greyedOut = greyed;
 
-        if (EnterSession.Queue.Latest(out var packet)) {
+        if (EnterSession.Latest(out var packet)) {
             Main.Instance.startPacket = packet;
         }
 

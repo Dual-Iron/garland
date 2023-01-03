@@ -17,7 +17,7 @@ partial class Main
 
         RainCycle rainCycle = self.game.world.rainCycle;
 
-        if (SyncRain.Queue.Latest(out var syncRain)) {
+        if (SyncRain.Latest(out var syncRain)) {
             Log.LogDebug(syncRain);
             syncRain.Deconstruct(out var timer, out var cycleLength, out self.rainDirection, out self.rainDirectionGetTo);
 
@@ -25,7 +25,7 @@ partial class Main
             rainCycle.cycleLength = cycleLength;
         }
 
-        if (SyncDeathRain.Queue.Latest(out var deathRain)) {
+        if (SyncDeathRain.Latest(out var deathRain)) {
             Log.LogDebug(deathRain);
             if (!rainCycle.deathRainHasHit) {
                 rainCycle.deathRainHasHit = true;
@@ -39,7 +39,7 @@ partial class Main
             CatchUpDeathRain(self, self.deathRain.deathRainMode);
         }
 
-        if (SyncAntiGrav.Queue.Latest(out var antiGrav)) {
+        if (SyncAntiGrav.Latest(out var antiGrav)) {
             rainCycle.brokenAntiGrav ??= new(self.game.setupValues.gravityFlickerCycleMin, self.game.setupValues.gravityFlickerCycleMax, self.game);
 
             antiGrav.Deconstruct(out rainCycle.brokenAntiGrav.on, out var counter, out rainCycle.brokenAntiGrav.from, out rainCycle.brokenAntiGrav.to);

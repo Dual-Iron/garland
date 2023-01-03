@@ -8,7 +8,7 @@ public enum PacketKind : ushort
 {
     /// <summary>Sent to the server any time the client's input changes.</summary>
     Input = 0x100,
-    /// <summary>Sent when the server begins a game session, and to joining clients.</summary>
+    /// <summary>Sent to clients joining a game session.</summary>
     EnterSession = 0x200,
     /// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.2.</summary>
     SyncRain = 0x201,
@@ -21,22 +21,17 @@ public enum PacketKind : ushort
 
 public static partial class Packets
 {
-    public static void QueuePacket(NetPacketReader data, BepInEx.Logging.ManualLogSource logger)
-    {
-        QueuePacket(data, error => logger.LogWarning(error));
-    }
-
-    public static void QueuePacket(NetPacketReader data, Action<string> error)
+    public static void QueuePacket(NetPeer sender, NetPacketReader data, Action<string> error)
     {
         try {
             ushort type = data.GetUShort();
 
             switch (type) {
-                case 0x100: Input.Queue.Enqueue(data.Read<Input>()); break;
-                case 0x200: EnterSession.Queue.Enqueue(data.Read<EnterSession>()); break;
-                case 0x201: SyncRain.Queue.Enqueue(data.Read<SyncRain>()); break;
-                case 0x202: SyncDeathRain.Queue.Enqueue(data.Read<SyncDeathRain>()); break;
-                case 0x203: SyncAntiGrav.Queue.Enqueue(data.Read<SyncAntiGrav>()); break;
+                case 0x100: Input.Queue.Enqueue(sender, data.Read<Input>()); break;
+                case 0x200: EnterSession.Queue.Enqueue(sender, data.Read<EnterSession>()); break;
+                case 0x201: SyncRain.Queue.Enqueue(sender, data.Read<SyncRain>()); break;
+                case 0x202: SyncDeathRain.Queue.Enqueue(sender, data.Read<SyncDeathRain>()); break;
+                case 0x203: SyncAntiGrav.Queue.Enqueue(sender, data.Read<SyncAntiGrav>()); break;
 
                 default: error($"Invalid packet type: 0x{type:X}"); break;
             }
@@ -55,6 +50,9 @@ public static partial class Packets
 public record struct Input(float X, float Y, byte Bitmask) : IPacket
 {
     public static PacketQueue<Input> Queue { get; } = new();
+
+    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
+    public static bool Latest(out Input packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.Input;
 
@@ -86,10 +84,13 @@ public record struct Input(float X, float Y, byte Bitmask) : IPacket
 
 }
 
-/// <summary>Sent when the server begins a game session, and to joining clients.</summary>
+/// <summary>Sent to clients joining a game session.</summary>
 public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int ClientPid, string StartingRoom) : IPacket
 {
     public static PacketQueue<EnterSession> Queue { get; } = new();
+
+    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
+    public static bool Latest(out EnterSession packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.EnterSession;
 
@@ -117,6 +118,9 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
 {
     public static PacketQueue<SyncRain> Queue { get; } = new();
 
+    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
+    public static bool Latest(out SyncRain packet) => Queue.Latest(out _, out packet);
+
     public PacketKind GetKind() => PacketKind.SyncRain;
 
     public void Deserialize(NetDataReader reader)
@@ -143,6 +147,9 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
 {
     public static PacketQueue<SyncDeathRain> Queue { get; } = new();
 
+    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
+    public static bool Latest(out SyncDeathRain packet) => Queue.Latest(out _, out packet);
+
     public PacketKind GetKind() => PacketKind.SyncDeathRain;
 
     public void Deserialize(NetDataReader reader)
@@ -168,6 +175,9 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
 public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To) : IPacket
 {
     public static PacketQueue<SyncAntiGrav> Queue { get; } = new();
+
+    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
+    public static bool Latest(out SyncAntiGrav packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.SyncAntiGrav;
 

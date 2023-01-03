@@ -38,7 +38,7 @@ partial class Main
 
         server = new(listener) { AutoRecycle = true };
 
-        listener.NetworkReceiveEvent += (peer, data, method) => Packets.QueuePacket(data, Log);
+        listener.NetworkReceiveEvent += (peer, data, method) => Packets.QueuePacket(peer, data, Log);
         listener.ConnectionRequestEvent += request => {
             if (server.ConnectedPeersCount < Utils.MaxConnections)
                 request.AcceptIfKey(Utils.ConnectionKey);
