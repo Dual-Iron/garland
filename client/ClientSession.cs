@@ -27,27 +27,21 @@ sealed class ClientSession : GameSession
         base.AddPlayer(player);
     }
 
-    public SharedPlayerData GetPlayerData(int pid)
-    {
-        if (pidToLocalID.TryGetValue(pid, out int localID)) {
-            return clientData[localID];
-        }
-        return new();
-    }
-    public SharedPlayerData GetPlayerData(EntityID eid) => GetPlayerData(eid.number);
-    public SharedPlayerData GetPlayerData(AbstractCreature player) => GetPlayerData(player.ID.number);
+    public SharedPlayerData? GetPlayerData(int pid) => pidToLocalID.TryGetValue(pid, out int localID) ? clientData[localID] : null;
+    public SharedPlayerData? GetPlayerData(EntityID eid) => GetPlayerData(eid.number);
+    public SharedPlayerData? GetPlayerData(AbstractCreature player) => GetPlayerData(player.ID.number);
 
-    public AbstractCreature MyPlayer => Players[pidToLocalID[ClientPid]];
-    public SharedPlayerData MyPlayerData => clientData[pidToLocalID[ClientPid]];
+    public AbstractCreature? MyPlayer => pidToLocalID.TryGetValue(ClientPid, out int id) ? Players[id] : null;
+    public SharedPlayerData? MyPlayerData => pidToLocalID.TryGetValue(ClientPid, out int id) ? clientData[id] : null;
 }
 
 static class ClientExt
 {
-    public static SharedPlayerData Data(this Player p)
+    public static SharedPlayerData? Data(this Player p)
     {
         if (p.abstractCreature.world.game.session is ClientSession session) {
             return session.GetPlayerData(p.abstractCreature);
         }
-        return null!;
+        return null;
     }
 }

@@ -105,35 +105,17 @@ sealed class ServerSession : GameSession
         }
     }
 
-    public SharedPlayerData GetPlayerData(int pid)
-    {
-        if (pid >= 0 && pid < serverData.Count) {
-            return serverData[pid];
-        }
-        return new();
-    }
-    public SharedPlayerData GetPlayerData(EntityID eid) => GetPlayerData(eid.number);
-    public SharedPlayerData GetPlayerData(AbstractCreature player) => GetPlayerData(player.ID.number);
-    public SharedPlayerData GetPlayerData(NetPeer peer)
-    {
-        if (peers.TryGetValue(peer.Id, out PeerData data)) {
-            return serverData[data.Pid];
-        }
-        throw new ArgumentException("Peer does not have any associated player; call ServerSession::Join before using ServerSession::GetPlayer.");
-    }
+    public SharedPlayerData? GetPlayerData(int pid) => pid >= 0 && pid < serverData.Count ? serverData[pid] : null;
+    public SharedPlayerData? GetPlayerData(EntityID eid) => GetPlayerData(eid.number);
+    public SharedPlayerData? GetPlayerData(AbstractCreature player) => GetPlayerData(player.ID.number);
+    public SharedPlayerData? GetPlayerData(NetPeer peer) => peers.TryGetValue(peer.Id, out PeerData data) ? serverData[data.Pid] : null;
 
-    public AbstractCreature GetPlayer(NetPeer peer)
-    {
-        if (peers.TryGetValue(peer.Id, out PeerData data)) {
-            return Players[data.Pid];
-        }
-        throw new ArgumentException("Peer does not have any associated player; call ServerSession::Join before using ServerSession::GetPlayer.");
-    }
+    public AbstractCreature? GetPlayer(NetPeer peer) => peers.TryGetValue(peer.Id, out PeerData data) ? Players[data.Pid] : null;
 }
 
 static class SessionExt
 {
-    public static SharedPlayerData Data(this Player player)
+    public static SharedPlayerData? Data(this Player player)
     {
         var session = (ServerSession)player.abstractPhysicalObject.world.game.session;
 
