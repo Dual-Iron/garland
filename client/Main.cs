@@ -50,6 +50,7 @@ partial class Main
 
     public void Hook()
     {
+        WorldHooks();
         GameHooks();
         MenuHooks();
         SessionHooks();
