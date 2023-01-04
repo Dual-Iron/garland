@@ -14,6 +14,9 @@ partial class Main
         // Fix SlugcatStats access
         new Hook(typeof(Player).GetMethod("get_slugcatStats"), getSlugcatStats);
         new Hook(typeof(Player).GetMethod("get_Malnourished"), getMalnourished);
+        
+        // Fix how rain appears for clients
+        new Hook(typeof(RainCycle).GetMethod("get_RainApproaching"), getRainApproaching);
 
         // Fix disconnections
         On.RainWorldGame.Update += ExitOnDisconnect;
@@ -35,6 +38,13 @@ partial class Main
     };
 
     private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
+    
+    private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => {
+        if (self.world.game.session is ClientSession) {
+            return UnityEngine.Mathf.InverseLerp(0f, 2400f, this.TimeUntilRain);
+        }
+        return orig(self);
+    };
 
     private void ExitOnDisconnect(On.RainWorldGame.orig_Update orig, RainWorldGame self)
     {
