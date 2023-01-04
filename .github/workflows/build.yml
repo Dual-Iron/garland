@@ -8,17 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v2.6.0
     - name: Set up .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v1.5.0
       with:
         dotnet-version: '7.0.x'
     - name: Run sourcegen
       run: cd sourcegen && dotnet run
     - name: Build solution
-      run: cd .. && dotnet publish -c Release -o output
+      run: dotnet publish -c Release -o output
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3.1.1
       with:
         path: |
           output/Client.dll
