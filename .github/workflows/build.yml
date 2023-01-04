@@ -6,6 +6,8 @@ jobs:
   build:
     name: Build .NET assemblies
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     steps:
     - name: Check out repo
       uses: actions/checkout@v2.6.0
