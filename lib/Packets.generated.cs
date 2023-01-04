@@ -1,6 +1,8 @@
 using LiteNetLib;
 using LiteNetLib.Utils;
+using RWCustom;
 using System;
+using UnityEngine;
 
 namespace Common;
 
@@ -16,7 +18,18 @@ public enum PacketKind : ushort
     SyncDeathRain = 0x202,
     /// <summary>Sent after each time AntiGravity toggles on or off. Progress is set to 0 each time the packet is received.</summary>
     SyncAntiGrav = 0x203,
+    /// <summary>Tells a client to realize a room if it hasn't already.</summary>
     RealizeRoom = 0x204,
+    /// <summary>Tells a client to abtractize a room if it hasn't already. TODO</summary>
+    AbstractizeRoom = 0x205,
+    /// <summary>Tells a client to destroy an object if it exists.</summary>
+    DestroyObject = 0x210,
+    /// <summary>Tells a client that a creature is inside a shortcut.</summary>
+    SyncShortcut = 0x211,
+    /// <summary>Introduces a player to the client.</summary>
+    IntroPlayer = 0x220,
+    /// <summary>Updates a player for a client.</summary>
+    UpdatePlayer = 0x300,
 
 }
 
@@ -34,6 +47,11 @@ public static partial class Packets
                 case 0x202: SyncDeathRain.Queue.Enqueue(sender, data.Read<SyncDeathRain>()); break;
                 case 0x203: SyncAntiGrav.Queue.Enqueue(sender, data.Read<SyncAntiGrav>()); break;
                 case 0x204: RealizeRoom.Queue.Enqueue(sender, data.Read<RealizeRoom>()); break;
+                case 0x205: AbstractizeRoom.Queue.Enqueue(sender, data.Read<AbstractizeRoom>()); break;
+                case 0x210: DestroyObject.Queue.Enqueue(sender, data.Read<DestroyObject>()); break;
+                case 0x211: SyncShortcut.Queue.Enqueue(sender, data.Read<SyncShortcut>()); break;
+                case 0x220: IntroPlayer.Queue.Enqueue(sender, data.Read<IntroPlayer>()); break;
+                case 0x300: UpdatePlayer.Queue.Enqueue(sender, data.Read<UpdatePlayer>()); break;
 
                 default: error($"Invalid packet type: 0x{type:X}"); break;
             }
@@ -49,27 +67,24 @@ public static partial class Packets
 }
 
 /// <summary>Sent to the server any time the client's input changes.</summary>
-public record struct Input(float X, float Y, byte Bitmask) : IPacket
+public record struct Input(Vector2 Dir, byte Bitmask) : IPacket
 {
     public static PacketQueue<Input> Queue { get; } = new();
 
-    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
     public static bool Latest(out Input packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.Input;
 
     public void Deserialize(NetDataReader reader)
     {
-        X = reader.GetFloat();
-        Y = reader.GetFloat();
+        Dir = reader.GetVec();
         Bitmask = reader.GetByte();
 
     }
 
     public void Serialize(NetDataWriter writer)
     {
-        writer.Put(X);
-        writer.Put(Y);
+        writer.Put(Dir);
         writer.Put(Bitmask);
 
     }
@@ -91,7 +106,6 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Cli
 {
     public static PacketQueue<EnterSession> Queue { get; } = new();
 
-    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
     public static bool Latest(out EnterSession packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.EnterSession;
@@ -120,7 +134,6 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
 {
     public static PacketQueue<SyncRain> Queue { get; } = new();
 
-    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
     public static bool Latest(out SyncRain packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.SyncRain;
@@ -149,7 +162,6 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
 {
     public static PacketQueue<SyncDeathRain> Queue { get; } = new();
 
-    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
     public static bool Latest(out SyncDeathRain packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.SyncDeathRain;
@@ -178,7 +190,6 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
 {
     public static PacketQueue<SyncAntiGrav> Queue { get; } = new();
 
-    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
     public static bool Latest(out SyncAntiGrav packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.SyncAntiGrav;
@@ -202,11 +213,11 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
     }
 }
 
+/// <summary>Tells a client to realize a room if it hasn't already.</summary>
 public record struct RealizeRoom(int Index) : IPacket
 {
     public static PacketQueue<RealizeRoom> Queue { get; } = new();
 
-    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
     public static bool Latest(out RealizeRoom packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.RealizeRoom;
@@ -222,5 +233,168 @@ public record struct RealizeRoom(int Index) : IPacket
         writer.Put(Index);
 
     }
+}
+
+/// <summary>Tells a client to abtractize a room if it hasn't already. TODO</summary>
+public record struct AbstractizeRoom(int Index) : IPacket
+{
+    public static PacketQueue<AbstractizeRoom> Queue { get; } = new();
+
+    public static bool Latest(out AbstractizeRoom packet) => Queue.Latest(out _, out packet);
+
+    public PacketKind GetKind() => PacketKind.AbstractizeRoom;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        Index = reader.GetInt();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(Index);
+
+    }
+}
+
+/// <summary>Tells a client to destroy an object if it exists.</summary>
+public record struct DestroyObject(int ID) : IPacket
+{
+    public static PacketQueue<DestroyObject> Queue { get; } = new();
+
+    public static bool Latest(out DestroyObject packet) => Queue.Latest(out _, out packet);
+
+    public PacketKind GetKind() => PacketKind.DestroyObject;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
+
+    }
+}
+
+/// <summary>Tells a client that a creature is inside a shortcut.</summary>
+public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, int Wait, IntVector2[] Positions) : IPacket
+{
+    public static PacketQueue<SyncShortcut> Queue { get; } = new();
+
+    public static bool Latest(out SyncShortcut packet) => Queue.Latest(out _, out packet);
+
+    public PacketKind GetKind() => PacketKind.SyncShortcut;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        CreatureID = reader.GetInt();
+        RoomID = reader.GetInt();
+        EntranceNode = reader.GetInt();
+        Wait = reader.GetInt();
+        Positions = reader.GetIVecArray();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(CreatureID);
+        writer.Put(RoomID);
+        writer.Put(EntranceNode);
+        writer.Put(Wait);
+        writer.Put(Positions);
+
+    }
+}
+
+/// <summary>Introduces a player to the client.</summary>
+public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float BodyWeight, float Lungs, float Loudness, float VisBonus, float Stealth, int ThrowingSkill, bool Ill) : IPacket
+{
+    public static PacketQueue<IntroPlayer> Queue { get; } = new();
+
+    public static bool Latest(out IntroPlayer packet) => Queue.Latest(out _, out packet);
+
+    public PacketKind GetKind() => PacketKind.IntroPlayer;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+        SkinR = reader.GetByte();
+        SkinG = reader.GetByte();
+        SkinB = reader.GetByte();
+        RunSpeed = reader.GetFloat();
+        PoleClimbSpeed = reader.GetFloat();
+        CorridorClimbSpeed = reader.GetFloat();
+        BodyWeight = reader.GetFloat();
+        Lungs = reader.GetFloat();
+        Loudness = reader.GetFloat();
+        VisBonus = reader.GetFloat();
+        Stealth = reader.GetFloat();
+        ThrowingSkill = reader.GetInt();
+        Ill = reader.GetBool();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
+        writer.Put(SkinR);
+        writer.Put(SkinG);
+        writer.Put(SkinB);
+        writer.Put(RunSpeed);
+        writer.Put(PoleClimbSpeed);
+        writer.Put(CorridorClimbSpeed);
+        writer.Put(BodyWeight);
+        writer.Put(Lungs);
+        writer.Put(Loudness);
+        writer.Put(VisBonus);
+        writer.Put(Stealth);
+        writer.Put(ThrowingSkill);
+        writer.Put(Ill);
+
+    }
+}
+
+/// <summary>Updates a player for a client.</summary>
+public record struct UpdatePlayer(int Room, Vector2 HeadPos, Vector2 ButtPos, Vector2 InputDir, byte InputBitmask) : IPacket
+{
+    public static PacketQueue<UpdatePlayer> Queue { get; } = new();
+
+    public static bool Latest(out UpdatePlayer packet) => Queue.Latest(out _, out packet);
+
+    public PacketKind GetKind() => PacketKind.UpdatePlayer;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        Room = reader.GetInt();
+        HeadPos = reader.GetVec();
+        ButtPos = reader.GetVec();
+        InputDir = reader.GetVec();
+        InputBitmask = reader.GetByte();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(Room);
+        writer.Put(HeadPos);
+        writer.Put(ButtPos);
+        writer.Put(InputDir);
+        writer.Put(InputBitmask);
+
+    }
+
+    public static byte ToInputBitmask(bool Jump, bool Throw, bool Pickup, bool Point)
+    {
+        return (byte)((Jump ? 0x1 : 0) | (Throw ? 0x2 : 0) | (Pickup ? 0x4 : 0) | (Point ? 0x8 : 0));
+    }
+
+    public bool Jump => (InputBitmask & 0x1) != 0;
+    public bool Throw => (InputBitmask & 0x2) != 0;
+    public bool Pickup => (InputBitmask & 0x4) != 0;
+    public bool Point => (InputBitmask & 0x8) != 0;
+
 }
 

@@ -3,23 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-// 0x100 to 0x1FF: Packets sent FROM client TO server
-// 0x200 to 0x2FF: Packets sent FROM server TO client
+// 0x100–0x1FF: Packets sent FROM client TO server
+// 0x200–0x3FF: Packets sent FROM server TO client
+//   0x200: Creature/object introductions, misc packets
+//   0x300: Creature/object updates
 
-// TODO IMMEDIATELY NEXT: Sync basic creature information.
-// ID, Type, Pos, Alive, MeatLeft
-
-// Then, some creatures have specific information that's sent every time they're introduced to the client.
-// Players: ID, SharedPlayerData
-
-// Then, some creatures have information that is constantly shared with players.
-// PLAYER INPUT (clients should ignore their own though), pathfinding, body chunk positions
+// TODO non-player objects lol
 
 const string PACKETS = """
 # Sent to the server any time the client's input changes.
 Input = 0x100 {
-    f32 X
-    f32 Y
+    vec Dir
     u8  Bitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8 }
 }
 
@@ -55,9 +49,55 @@ SyncAntiGrav = 0x203 {
     f32  To
 }
 
-# Sent when the server decides that a client should realize a room if it hasn't already.
+# Tells a client to realize a room if it hasn't already.
 RealizeRoom = 0x204 {
     i32 Index
+}
+
+# Tells a client to abtractize a room if it hasn't already. TODO (low-priority)
+AbstractizeRoom = 0x205 {
+    i32 Index
+}
+
+# Tells a client to destroy an object if it exists. TODO
+DestroyObject = 0x210 {
+    i32 ID
+}
+
+# Tells a client that a creature is inside a shortcut. TODO (high-priority)
+SyncShortcut = 0x211 {
+    i32    CreatureID
+    i32    RoomID
+    i32    EntranceNode
+    i32    Wait
+    ivec[] Positions
+}
+
+# Introduces a player to the client. TODO (next)
+IntroPlayer = 0x220 {
+    i32  ID
+    u8   SkinR
+    u8   SkinG
+    u8   SkinB
+    f32  RunSpeed
+    f32  PoleClimbSpeed
+    f32  CorridorClimbSpeed
+    f32  BodyWeight
+    f32  Lungs
+    f32  Loudness
+    f32  VisBonus
+    f32  Stealth
+    i32  ThrowingSkill
+    bool Ill
+}
+
+# Updates a player for a client.
+UpdatePlayer = 0x300 {
+    i32 Room
+    vec HeadPos
+    vec ButtPos
+    vec InputDir
+    u8  InputBitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8 }
 }
 
 """;
@@ -77,7 +117,9 @@ while (reader.TextRemaining()) {
 StringBuilder source = new("""
 using LiteNetLib;
 using LiteNetLib.Utils;
+using RWCustom;
 using System;
+using UnityEngine;
 
 namespace Common;
 
@@ -127,7 +169,7 @@ PacketField ParsePacketField(ref PacketSourceReader reader)
 {
     PacketField field;
 
-    field.Type = ParsePacketFieldType(ref reader);
+    field.Type = reader.ReadWord();
     field.Name = reader.ReadWord();
 
     field.BitmaskStart = bitmasks.Count;
@@ -139,20 +181,6 @@ PacketField ParsePacketField(ref PacketSourceReader reader)
     field.BitmaskEnd = bitmasks.Count;
 
     return field;
-}
-
-PacketFieldType ParsePacketFieldType(ref PacketSourceReader reader)
-{
-    return reader.ReadWord() switch {
-        "str" => PacketFieldType.Str,
-        "bool" => PacketFieldType.Bool,
-        "u8" => PacketFieldType.U8,
-        "u16" => PacketFieldType.U16,
-        "u32" => PacketFieldType.U32,
-        "i32" => PacketFieldType.I32,
-        "f32" => PacketFieldType.F32,
-        _ => throw new("Invalid packet field type")
-    };
 }
 
 BitmaskPart ParseBitmask(ref PacketSourceReader reader)
@@ -276,7 +304,6 @@ public record struct {{packet.Name}}({{parameters}}) : IPacket
 {
     public static PacketQueue<{{packet.Name}}> Queue { get; } = new();
 
-    /// <summary>Shortcut for <see cref="PacketQueue{T}.Latest(out NetPeer, out T)"/>.</summary>
     public static bool Latest(out {{packet.Name}} packet) => Queue.Latest(out _, out packet);
 
     public PacketKind GetKind() => PacketKind.{{packet.Name}};
@@ -306,34 +333,36 @@ struct PacketKind
     public int FieldEnd;
 }
 
-enum PacketFieldType { Str, Bool, U8, U16, U32, I32, F32, }
-
 struct PacketField
 {
-    public PacketFieldType Type;
+    public string Type;
     public string Name;
     public int BitmaskStart;
     public int BitmaskEnd;
 
     public string TypeCsharp() => Type switch {
-        PacketFieldType.Str => "string",
-        PacketFieldType.Bool => "bool",
-        PacketFieldType.U8 => "byte",
-        PacketFieldType.U16 => "ushort",
-        PacketFieldType.U32 => "uint",
-        PacketFieldType.I32 => "int",
-        PacketFieldType.F32 => "float",
+        "str" => "string",
+        "bool" => "bool",
+        "u8" => "byte",
+        "u16" => "ushort",
+        "u32" => "uint",
+        "i32" => "int",
+        "f32" => "float",
+        "vec" => "Vector2",
+        "ivec[]" => "IntVector2[]",
         _ => throw new ArgumentException()
     };
 
     public string DeserializeCall() => Type switch {
-        PacketFieldType.Str => "GetString()",
-        PacketFieldType.Bool => "GetBool()",
-        PacketFieldType.U8 => "GetByte()",
-        PacketFieldType.U16 => "GetUShort()",
-        PacketFieldType.U32 => "GetUInt()",
-        PacketFieldType.I32 => "GetInt()",
-        PacketFieldType.F32 => "GetFloat()",
+        "str" => "GetString()",
+        "bool" => "GetBool()",
+        "u8" => "GetByte()",
+        "u16" => "GetUShort()",
+        "u32" => "GetUInt()",
+        "i32" => "GetInt()",
+        "f32" => "GetFloat()",
+        "vec" => "GetVec()",
+        "ivec[]" => "GetIVecArray()",
         _ => throw new ArgumentException()
     };
 }

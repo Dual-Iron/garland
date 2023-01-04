@@ -9,7 +9,7 @@
   <ItemGroup>
     <Reference Include="../lib/*.refstub.dll" />
     <Compile Include="../lib/**/*.cs">
-      <Visible>false</Visible>
+      <Visible>true</Visible>
     </Compile>
   </ItemGroup>
 

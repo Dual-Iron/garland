@@ -1,7 +1,9 @@
 using LiteNetLib;
 using LiteNetLib.Utils;
+using RWCustom;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Common;
 
@@ -36,6 +38,54 @@ public static partial class Packets
         value.Deserialize(reader);
         return value;
     }
+
+    #region Custom Get/Put methods for LiteNetLib
+    public static Vector2 GetVec(this NetDataReader reader) => new(x: reader.GetFloat(), y: reader.GetFloat());
+    public static Vector2[] GetVecArray(this NetDataReader reader)
+    {
+        Vector2[] ret = new Vector2[reader.GetUShort()];
+        for (int i = 0; i < ret.Length; i++) {
+            ret[i] = reader.GetVec();
+        }
+        return ret;
+    }
+
+    public static IntVector2 GetIVec(this NetDataReader reader) => new(p1: reader.GetInt(), p2: reader.GetInt());
+    public static IntVector2[] GetIVecArray(this NetDataReader reader)
+    {
+        IntVector2[] ret = new IntVector2[reader.GetUShort()];
+        for (int i = 0; i < ret.Length; i++) {
+            ret[i] = reader.GetIVec();
+        }
+        return ret;
+    }
+
+    public static void Put(this NetDataWriter writer, Vector2 vec)
+    {
+        writer.Put(vec.x);
+        writer.Put(vec.y);
+    }
+    public static void Put(this NetDataWriter writer, Vector2[] vec)
+    {
+        writer.Put((ushort)vec.Length);
+        for (int i = 0; i < vec.Length; i++) {
+            writer.Put(vec[i]);
+        }
+    }
+
+    public static void Put(this NetDataWriter writer, IntVector2 vec)
+    {
+        writer.Put(vec.x);
+        writer.Put(vec.y);
+    }
+    public static void Put(this NetDataWriter writer, IntVector2[] vec)
+    {
+        writer.Put((ushort)vec.Length);
+        for (int i = 0; i < vec.Length; i++) {
+            writer.Put(vec[i]);
+        }
+    }
+    #endregion
 }
 
 // TODO: add a limit to PacketQueue after which old packets are dropped
