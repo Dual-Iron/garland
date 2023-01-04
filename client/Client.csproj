@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="../lib/*.refstub.dll" />
-    <Compile Include="../lib/**/*.cs">
+    <Reference Include="../refs/*.refstub.dll" />
+    <Compile Include="../common/**/*.cs">
       <Visible>false</Visible>
     </Compile>
   </ItemGroup>
