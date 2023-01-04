@@ -38,13 +38,21 @@ foreach (var packet in packetKinds) {
 // Create file
 File.WriteAllText("Packets.generated.cs", source.ToString());
 
-try {
-    File.Move("Packets.generated.cs", "../../../../common/Packets.generated.cs", overwrite: true);
-    Console.WriteLine("File successfully generated and moved to `common` directory.");
+// Find `garland` directory and move file to `garland/common`...
+DirectoryInfo dir = new(Path.GetFullPath("."));
+while (dir.Parent != null) {
+    if (dir.Name == "garland") {
+        File.Move("Packets.generated.cs", Path.Combine(dir.FullName, "common", "Packets.generated.cs"), overwrite: true);
+
+        Console.WriteLine("File successfully generated and moved to `common` directory.");
+
+        return;
+    }
+    dir = dir.Parent;
 }
-catch {
-    Console.WriteLine("File successfully generated, but not moved. Please move to `common` directory manually.");
-}
+
+// ...or print an error
+Console.Error.WriteLine("File successfully generated, but not moved to `common` directory.");
 
 #region PARSE METHODS
 PacketKind ParsePacketKind(ref PacketSourceReader reader)
