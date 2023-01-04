@@ -4,6 +4,7 @@ using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using RWCustom;
 using System;
+using UnityEngine;
 
 namespace Client;
 
@@ -41,7 +42,7 @@ partial class Main
     
     private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => {
         if (self.world.game.session is ClientSession) {
-            return UnityEngine.Mathf.InverseLerp(0f, 2400f, self.TimeUntilRain);
+            return Mathf.InverseLerp(0f, 2400f, self.TimeUntilRain);
         }
         return orig(self);
     };

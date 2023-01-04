@@ -16,6 +16,9 @@ partial class Main
         new Hook(typeof(Player).GetMethod("get_slugcatStats"), getSlugcatStats);
         new Hook(typeof(Player).GetMethod("get_Malnourished"), getMalnourished);
 
+        // Fix rain
+        new Hook(typeof(RainCycle).GetMethod("get_RainApproaching"), getRainApproaching);
+
         // Just debug stuff
         On.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
 
@@ -35,6 +38,8 @@ partial class Main
     private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats?> getSlugcatStats = (orig, self) => self.Data()?.stats;
 
     private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
+
+    private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => Mathf.InverseLerp(0f, 2400f, self.TimeUntilRain);
 
     private void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
     {
@@ -82,7 +87,7 @@ partial class Main
         self.game = game;
 
         if (game != null) {
-            self.rainCycle = new(self, Mathf.Lerp(ServerConfig.CycleTimeMinutesMin, ServerConfig.CycleTimeMinutesMax, UnityEngine.Random.value));
+            self.rainCycle = new(self, Mathf.Lerp(ServerConfig.CycleTimeSecondsMin / 60f, ServerConfig.CycleTimeSecondsMax / 60f, UnityEngine.Random.value));
         }
     }
 
