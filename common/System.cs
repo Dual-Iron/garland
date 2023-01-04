@@ -20,41 +20,20 @@ internal struct ValueTuple<T1, T2> : IEquatable<ValueTuple<T1, T2>>, IComparable
 
     public bool Equals(ValueTuple<T1, T2> other)
     {
-        return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
-            && EqualityComparer<T2>.Default.Equals(Item2, other.Item2);
+        return EqualityComparer<T1>.Default.Equals(Item1, other.Item1) && EqualityComparer<T2>.Default.Equals(Item2, other.Item2);
     }
 
     int IComparable.CompareTo(object other)
     {
-        if (other == null) return 1;
-
-        if (other is not ValueTuple<T1, T2>) {
-            throw new();
-        }
-
-        return CompareTo((ValueTuple<T1, T2>)other);
+        return other is ValueTuple<T1, T2> tuple ? CompareTo(tuple) : throw new();
     }
 
     public int CompareTo(ValueTuple<T1, T2> other)
     {
         int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
-        if (c != 0) return c;
-
-        return Comparer<T2>.Default.Compare(Item2, other.Item2);
+        return c != 0 ? c : Comparer<T2>.Default.Compare(Item2, other.Item2);
     }
 
-    static int Combine(int newKey, int currentKey)
-    {
-        return unchecked((currentKey * (int)0xA5555529) + newKey);
-    }
-
-    public override int GetHashCode()
-    {
-        return Combine(Item1?.GetHashCode() ?? 0, Item2?.GetHashCode() ?? 0);
-    }
-
-    public override string ToString()
-    {
-        return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ")";
-    }
+    public override int GetHashCode() => unchecked(((currentKey?.GetHashCode() ?? 0) * (int)0xA5555529) + newKey?.GetHashCode() ?? 0);
+    public override string ToString() => $"({Item1}, {Item2})";
 }
