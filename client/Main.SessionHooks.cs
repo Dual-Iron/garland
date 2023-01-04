@@ -41,7 +41,7 @@ partial class Main
     
     private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => {
         if (self.world.game.session is ClientSession) {
-            return UnityEngine.Mathf.InverseLerp(0f, 2400f, this.TimeUntilRain);
+            return UnityEngine.Mathf.InverseLerp(0f, 2400f, self.TimeUntilRain);
         }
         return orig(self);
     };
