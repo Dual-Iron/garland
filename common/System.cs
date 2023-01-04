@@ -34,6 +34,6 @@ internal struct ValueTuple<T1, T2> : IEquatable<ValueTuple<T1, T2>>, IComparable
         return c != 0 ? c : Comparer<T2>.Default.Compare(Item2, other.Item2);
     }
 
-    public override int GetHashCode() => unchecked(((currentKey?.GetHashCode() ?? 0) * (int)0xA5555529) + newKey?.GetHashCode() ?? 0);
+    public override int GetHashCode() => unchecked(((Item1?.GetHashCode() ?? 0) * (int)0xA5555529) + Item2?.GetHashCode() ?? 0);
     public override string ToString() => $"({Item1}, {Item2})";
 }
