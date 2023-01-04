@@ -44,6 +44,7 @@ partial class Main
 
             antiGrav.Deconstruct(out rainCycle.brokenAntiGrav.on, out var counter, out rainCycle.brokenAntiGrav.from, out rainCycle.brokenAntiGrav.to);
 
+            rainCycle.brokenAntiGrav.progress = 0;
             rainCycle.brokenAntiGrav.counter = counter;
         }
     }
