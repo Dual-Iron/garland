@@ -20,13 +20,13 @@ public enum PacketKind : ushort
     SyncAntiGrav = 0x203,
     /// <summary>Tells a client to realize a room if it hasn't already.</summary>
     RealizeRoom = 0x204,
-    /// <summary>Tells a client to abtractize a room if it hasn't already. TODO</summary>
+    /// <summary>Tells a client to abtractize a room if it hasn't already. TODO (low-priority)</summary>
     AbstractizeRoom = 0x205,
-    /// <summary>Tells a client to destroy an object if it exists.</summary>
+    /// <summary>Tells a client to destroy an object if it exists. TODO</summary>
     DestroyObject = 0x210,
-    /// <summary>Tells a client that a creature is inside a shortcut.</summary>
+    /// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
     SyncShortcut = 0x211,
-    /// <summary>Introduces a player to the client.</summary>
+    /// <summary>Introduces a player to the client. TODO (next)</summary>
     IntroPlayer = 0x220,
     /// <summary>Updates a player for a client.</summary>
     UpdatePlayer = 0x300,
@@ -235,7 +235,7 @@ public record struct RealizeRoom(int Index) : IPacket
     }
 }
 
-/// <summary>Tells a client to abtractize a room if it hasn't already. TODO</summary>
+/// <summary>Tells a client to abtractize a room if it hasn't already. TODO (low-priority)</summary>
 public record struct AbstractizeRoom(int Index) : IPacket
 {
     public static PacketQueue<AbstractizeRoom> Queue { get; } = new();
@@ -257,7 +257,7 @@ public record struct AbstractizeRoom(int Index) : IPacket
     }
 }
 
-/// <summary>Tells a client to destroy an object if it exists.</summary>
+/// <summary>Tells a client to destroy an object if it exists. TODO</summary>
 public record struct DestroyObject(int ID) : IPacket
 {
     public static PacketQueue<DestroyObject> Queue { get; } = new();
@@ -279,7 +279,7 @@ public record struct DestroyObject(int ID) : IPacket
     }
 }
 
-/// <summary>Tells a client that a creature is inside a shortcut.</summary>
+/// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
 public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, int Wait, IntVector2[] Positions) : IPacket
 {
     public static PacketQueue<SyncShortcut> Queue { get; } = new();
@@ -309,7 +309,7 @@ public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, 
     }
 }
 
-/// <summary>Introduces a player to the client.</summary>
+/// <summary>Introduces a player to the client. TODO (next)</summary>
 public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float BodyWeight, float Lungs, float Loudness, float VisBonus, float Stealth, int ThrowingSkill, bool Ill) : IPacket
 {
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
