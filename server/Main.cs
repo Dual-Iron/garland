@@ -80,6 +80,7 @@ partial class Main
 
         // Small optimization
         On.SoundLoader.ShouldSoundPlay += delegate { return false; };
+        // TODO see if this works...? On.RainWorldGame.GrafUpdate += delegate { };
     }
 
     private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)

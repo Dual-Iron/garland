@@ -19,6 +19,9 @@ partial class Main
         // Fix rain
         new Hook(typeof(RainCycle).GetMethod("get_RainApproaching"), getRainApproaching);
 
+        // Fix SlugcatWorld
+        On.RoomSettings.ctor += RoomSettings_ctor;
+
         // Just debug stuff
         On.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
 
@@ -40,6 +43,11 @@ partial class Main
     private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
 
     private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => Mathf.InverseLerp(0f, 2400f, self.TimeUntilRain);
+
+    private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, int playerChar)
+    {
+        orig(self, name, region, template, firstTemplate, ServerConfig.SlugcatWorld);
+    }
 
     private void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
     {
