@@ -58,7 +58,6 @@ partial class Main
     public void Hook()
     {
         ObjectHooks();
-        WorldHooks();
         GameHooks();
         MenuHooks();
         SessionHooks();

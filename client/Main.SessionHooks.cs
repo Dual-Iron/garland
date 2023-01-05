@@ -16,9 +16,18 @@ partial class Main
         // Fix SlugcatStats access
         new Hook(typeof(Player).GetMethod("get_slugcatStats"), getSlugcatStats);
         new Hook(typeof(Player).GetMethod("get_Malnourished"), getMalnourished);
-        
+
         // Fix how rain appears for clients
         new Hook(typeof(RainCycle).GetMethod("get_RainApproaching"), getRainApproaching);
+
+        // Prevent world creatures from spawning as client
+        new Hook(typeof(RainWorldGame).GetMethod("get_setupValues"), getSetupValues);
+
+        // Prevent spawning various placed physical objects, and random objects like spears and rocks
+        On.Room.ctor += Room_ctor;
+
+        // Fix SlugcatWorld
+        On.RoomSettings.ctor += RoomSettings_ctor;
 
         // Fix disconnections
         On.RainWorldGame.Update += ExitOnDisconnect;
@@ -36,24 +45,6 @@ partial class Main
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
-    private void HUD_InitSinglePlayerHud(On.HUD.HUD.orig_InitSinglePlayerHud orig, HUD.HUD self, RoomCamera cam)
-    {
-        if (self.owner is Player p && p.Game().session is ClientSession) {
-            self.AddPart(new TextPrompt(self));
-            self.AddPart(new KarmaMeter(self, self.fContainers[1], new IntVector2(p.Karma, p.KarmaCap), p.KarmaIsReinforced));
-            self.AddPart(new FoodMeter(self, p.slugcatStats.maxFood, p.slugcatStats.foodToHibernate));
-            self.AddPart(new RainMeter(self, self.fContainers[1]));
-            if (cam.room.abstractRoom.shelter) {
-                self.karmaMeter.fade = 1f;
-                self.rainMeter.fade = 1f;
-                self.foodMeter.fade = 1f;
-            }
-        }
-        else {
-            orig(self, cam);
-        }
-    }
-
     private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => {
         return self.Data()?.Stats ?? orig(self);
     };
@@ -66,6 +57,37 @@ partial class Main
         }
         return orig(self);
     };
+
+    private readonly Func<Func<RainWorldGame, RainWorldGame.SetupValues>, RainWorldGame, RainWorldGame.SetupValues> getSetupValues = (orig, game) => {
+        if (game.session is ClientSession) {
+            return orig(game) with { worldCreaturesSpawn = false };
+        }
+        return orig(game);
+    };
+
+
+    int? storyCharOverride = null;
+    private void Room_ctor(On.Room.orig_ctor orig, Room self, RainWorldGame game, World world, AbstractRoom abstractRoom)
+    {
+        if (game?.session is ClientSession session) {
+            storyCharOverride = session.SlugcatWorld;
+            orig(self, game, world, abstractRoom);
+
+            // Don't spawn physical objects!!
+            self.abstractRoom.firstTimeRealized = false;
+        }
+        else {
+            storyCharOverride = null;
+            orig(self, game, world, abstractRoom);
+        }
+    }
+    private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, int playerChar)
+    {
+        if (storyCharOverride.HasValue) {
+            playerChar = storyCharOverride.Value;
+        }
+        orig(self, name, region, template, firstTemplate, playerChar);
+    }
 
     private void ExitOnDisconnect(On.RainWorldGame.orig_Update orig, RainWorldGame self)
     {
@@ -133,7 +155,24 @@ partial class Main
         self.rainCycle = new(self, 10) { storyMode = true };
     }
 
-    // TODO make follow assigned slugcat
+    private void HUD_InitSinglePlayerHud(On.HUD.HUD.orig_InitSinglePlayerHud orig, HUD.HUD self, RoomCamera cam)
+    {
+        if (self.owner is Player p && p.Game().session is ClientSession) {
+            self.AddPart(new TextPrompt(self));
+            self.AddPart(new KarmaMeter(self, self.fContainers[1], new IntVector2(p.Karma, p.KarmaCap), p.KarmaIsReinforced));
+            self.AddPart(new FoodMeter(self, p.slugcatStats.maxFood, p.slugcatStats.foodToHibernate));
+            self.AddPart(new RainMeter(self, self.fContainers[1]));
+            if (cam.room.abstractRoom.shelter) {
+                self.karmaMeter.fade = 1f;
+                self.rainMeter.fade = 1f;
+                self.foodMeter.fade = 1f;
+            }
+        }
+        else {
+            orig(self, cam);
+        }
+    }
+
     private void FixPauseAndCrash(ILContext il)
     {
         ILCursor cursor = new(il);
