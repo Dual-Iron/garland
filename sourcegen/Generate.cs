@@ -20,6 +20,7 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using RWCustom;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Common;
@@ -214,6 +215,7 @@ public record struct {{packet.Name}}({{parameters}}) : IPacket
     public static PacketQueue<{{packet.Name}}> Queue { get; } = new();
 
     public static bool Latest(out {{packet.Name}} packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<{{packet.Name}}> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.{{packet.Name}};
 

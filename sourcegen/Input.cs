@@ -59,8 +59,13 @@ DestroyObject = 0x206 {
     i32 ID
 }
 
+# Kills a creature for a client.
+KillCreature = 0x207 {
+    i32 ID
+}
+
 # Tells a client that a creature is inside a shortcut. TODO (high-priority)
-SyncShortcut = 0x207 {
+SyncShortcut = 0x208 {
     i32    CreatureID
     i32    Room
     i32    EntranceNode

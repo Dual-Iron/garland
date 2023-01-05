@@ -2,6 +2,7 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using RWCustom;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Common;
@@ -24,8 +25,10 @@ public enum PacketKind : ushort
     AbstractizeRoom = 0x205,
     /// <summary>Tells a client to destroy an object if it exists. TODO</summary>
     DestroyObject = 0x206,
+    /// <summary>Kills a creature for a client.</summary>
+    KillCreature = 0x207,
     /// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
-    SyncShortcut = 0x207,
+    SyncShortcut = 0x208,
     /// <summary>Introduces a player to the client. TODO (next)</summary>
     IntroPlayer = 0x210,
     /// <summary>Updates a player for a client.</summary>
@@ -49,7 +52,8 @@ public static partial class Packets
                 case 0x204: RealizeRoom.Queue.Enqueue(sender, data.Read<RealizeRoom>()); break;
                 case 0x205: AbstractizeRoom.Queue.Enqueue(sender, data.Read<AbstractizeRoom>()); break;
                 case 0x206: DestroyObject.Queue.Enqueue(sender, data.Read<DestroyObject>()); break;
-                case 0x207: SyncShortcut.Queue.Enqueue(sender, data.Read<SyncShortcut>()); break;
+                case 0x207: KillCreature.Queue.Enqueue(sender, data.Read<KillCreature>()); break;
+                case 0x208: SyncShortcut.Queue.Enqueue(sender, data.Read<SyncShortcut>()); break;
                 case 0x210: IntroPlayer.Queue.Enqueue(sender, data.Read<IntroPlayer>()); break;
                 case 0x211: UpdatePlayer.Queue.Enqueue(sender, data.Read<UpdatePlayer>()); break;
 
@@ -72,6 +76,7 @@ public record struct Input(Vector2 Dir, byte Bitmask) : IPacket
     public static PacketQueue<Input> Queue { get; } = new();
 
     public static bool Latest(out Input packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<Input> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.Input;
 
@@ -107,6 +112,7 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Cli
     public static PacketQueue<EnterSession> Queue { get; } = new();
 
     public static bool Latest(out EnterSession packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<EnterSession> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.EnterSession;
 
@@ -135,6 +141,7 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
     public static PacketQueue<SyncRain> Queue { get; } = new();
 
     public static bool Latest(out SyncRain packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<SyncRain> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.SyncRain;
 
@@ -163,6 +170,7 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
     public static PacketQueue<SyncDeathRain> Queue { get; } = new();
 
     public static bool Latest(out SyncDeathRain packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<SyncDeathRain> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.SyncDeathRain;
 
@@ -191,6 +199,7 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
     public static PacketQueue<SyncAntiGrav> Queue { get; } = new();
 
     public static bool Latest(out SyncAntiGrav packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<SyncAntiGrav> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.SyncAntiGrav;
 
@@ -219,6 +228,7 @@ public record struct RealizeRoom(int Index) : IPacket
     public static PacketQueue<RealizeRoom> Queue { get; } = new();
 
     public static bool Latest(out RealizeRoom packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<RealizeRoom> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.RealizeRoom;
 
@@ -241,6 +251,7 @@ public record struct AbstractizeRoom(int Index) : IPacket
     public static PacketQueue<AbstractizeRoom> Queue { get; } = new();
 
     public static bool Latest(out AbstractizeRoom packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<AbstractizeRoom> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.AbstractizeRoom;
 
@@ -263,8 +274,32 @@ public record struct DestroyObject(int ID) : IPacket
     public static PacketQueue<DestroyObject> Queue { get; } = new();
 
     public static bool Latest(out DestroyObject packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<DestroyObject> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.DestroyObject;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
+
+    }
+}
+
+/// <summary>Kills a creature for a client.</summary>
+public record struct KillCreature(int ID) : IPacket
+{
+    public static PacketQueue<KillCreature> Queue { get; } = new();
+
+    public static bool Latest(out KillCreature packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<KillCreature> All() => Queue.Drain();
+
+    public PacketKind GetKind() => PacketKind.KillCreature;
 
     public void Deserialize(NetDataReader reader)
     {
@@ -285,6 +320,7 @@ public record struct SyncShortcut(int CreatureID, int Room, int EntranceNode, in
     public static PacketQueue<SyncShortcut> Queue { get; } = new();
 
     public static bool Latest(out SyncShortcut packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<SyncShortcut> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.SyncShortcut;
 
@@ -315,6 +351,7 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
 
     public static bool Latest(out IntroPlayer packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<IntroPlayer> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.IntroPlayer;
 
@@ -379,6 +416,7 @@ public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Ani
     public static PacketQueue<UpdatePlayer> Queue { get; } = new();
 
     public static bool Latest(out UpdatePlayer packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<UpdatePlayer> All() => Queue.Drain();
 
     public PacketKind GetKind() => PacketKind.UpdatePlayer;
 

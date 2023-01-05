@@ -6,9 +6,23 @@ partial class Main
 {
     private void ObjectHooks()
     {
+        // Sync creature deaths
+        On.AbstractCreature.Die += AbstractCreature_Die;
+
+        // Check for player input packets and use them
         On.Room.Update += Room_Update;
         On.RWInput.PlayerInput += RWInput_PlayerInput;
+
+        // Sync client players
         On.Player.Update += Player_Update;
+    }
+
+    private void AbstractCreature_Die(On.AbstractCreature.orig_Die orig, AbstractCreature self)
+    {
+        if (self.state.alive) {
+            server.Broadcast(new KillCreature(self.ID.number));
+        }
+        orig(self);
     }
 
     private void Room_Update(On.Room.orig_Update orig, Room self)

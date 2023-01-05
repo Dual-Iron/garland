@@ -23,23 +23,38 @@ sealed class ClientRoomLogic
             game.cameras[0].MoveCamera(session.MyPlayer.Room.realizedRoom, 0);
         }
 
-        foreach (var packet in RealizeRoom.Queue.Drain()) {
+        foreach (var packet in RealizeRoom.All()) {
             Main.Log.LogDebug($"Respecting request to realize {game.world.GetAbstractRoom(packet.Index).name}");
             game.world.ActivateRoom(packet.Index);
         }
 
-        foreach (var packet in AbstractizeRoom.Queue.Drain()) {
+        foreach (var packet in AbstractizeRoom.All()) {
             game.world.GetAbstractRoom(packet.Index).Abstractize();
+        }
+
+        foreach (var packet in DestroyObject.All()) {
+            if (session.Objects.TryGetValue(packet.ID, out var obj) && !obj.slatedForDeletetion) {
+                obj.abstractPhysicalObject.Destroy();
+                obj.Destroy();
+                session.Objects.Remove(packet.ID);
+            }
         }
 
         IntroduceStuff();
 
         UpdateStuff();
+
+        foreach (var packet in KillCreature.All()) {
+            if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Creature crit) {
+                Main.Log.LogDebug($"Server killed {obj.abstractPhysicalObject.type} #{packet.ID}");
+                crit.Die();
+            }
+        }
     }
 
     private void IntroduceStuff()
     {
-        foreach (var packet in IntroPlayer.Queue.Drain()) {
+        foreach (var packet in IntroPlayer.All()) {
             Main.Log.LogDebug($"Introduced player {packet.ID}");
 
             // Set this before realizing player (so slugcatStats is not null)
@@ -77,11 +92,11 @@ sealed class ClientRoomLogic
 
     private void UpdateStuff()
     {
-        foreach (var packet in UpdatePlayer.Queue.Drain()) {
+        foreach (var packet in UpdatePlayer.All()) {
             if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Player p) {
-                p.firstChunk.pos = packet.HeadPos;
+                p.firstChunk.pos = Vec.Lerp(p.firstChunk.pos, packet.HeadPos, 0.8f);
                 p.firstChunk.vel = packet.HeadVel;
-                p.bodyChunks[1].pos = packet.ButtPos;
+                p.bodyChunks[1].pos = Vec.Lerp(p.bodyChunks[1].pos, packet.ButtPos, 0.8f);
                 p.bodyChunks[1].vel = packet.ButtVel;
 
                 p.standing = packet.Standing;
