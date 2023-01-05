@@ -9,11 +9,7 @@ namespace Server;
 
 sealed class ServerSession : GameSession
 {
-    struct PeerData
-    {
-        public string Hash;
-        public int Pid;
-    }
+    record struct PeerData(string Hash, int Pid);
 
     public ServerSession(byte slugcatWorld, RainWorldGame game) : base(game)
     {
@@ -86,17 +82,25 @@ sealed class ServerSession : GameSession
         return Players[pid];
     }
 
+    /// <summary>Returns true if any connected peers are already associated with the given player hash.</summary>
+    public bool AnyPeerConnectedTo(string hash) => peers.Values.Any(v => v.Hash == hash);
+
     /// <summary>Called when a peer joins the game and needs a new AbstractCreature to represent them.</summary>
     public AbstractCreature Join(NetPeer peer, string hash)
     {
         var crit = GetOrCreatePlayer(hash);
 
-        // If peer isn't already cached, or is cached under the wrong hash, cache it.
+        // If this peer is new, add em.
         if (!peers.TryGetValue(peer.Id, out var peerData) || peerData.Hash != hash) {
-            peers[peer.Id] = new PeerData { Hash = hash, Pid = hashToPid[hash] };
+            peers[peer.Id] = new PeerData(hash, hashToPid[hash]);
         }
 
         return crit;
+    }
+
+    public void Leave(NetPeer peer)
+    {
+        peers.Remove(peer.Id);
     }
 
     public void SendObjectUpdate<T>(PhysicalObject o, T packet) where T : IPacket

@@ -1,6 +1,5 @@
 ﻿using Common;
 using LiteNetLib;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -49,15 +48,26 @@ sealed class ServerRoomLogic
         this.game = game;
         this.session = session;
 
+        On.AbstractCreature.Realize += SyncRealize;
         On.AbstractPhysicalObject.Realize += SyncRealize;
         On.AbstractPhysicalObject.Abstractize += SyncAbstractize;
+        On.AbstractPhysicalObject.Move += SyncMove;
+    }
+
+    private void SyncRealize(On.AbstractCreature.orig_Realize orig, AbstractCreature self)
+    {
+        orig(self);
+        if (self.realizedObject != null) {
+            foreach (TrackedPeer peer in trackedPeers) {
+                LoadObject(peer, self.realizedObject);
+            }
+        }
     }
 
     private void SyncRealize(On.AbstractPhysicalObject.orig_Realize orig, AbstractPhysicalObject self)
     {
-        bool actuallyRealizing = self.realizedObject == null;
         orig(self);
-        if (actuallyRealizing && self.realizedObject != null) {
+        if (self.realizedObject != null) {
             foreach (TrackedPeer peer in trackedPeers) {
                 LoadObject(peer, self.realizedObject);
             }
@@ -72,6 +82,19 @@ sealed class ServerRoomLogic
             }
         }
         orig(self, coord);
+    }
+
+    private void SyncMove(On.AbstractPhysicalObject.orig_Move orig, AbstractPhysicalObject self, WorldCoordinate newCoord)
+    {
+        orig(self, newCoord);
+
+        if (self.realizedObject != null) {
+            foreach (TrackedPeer peer in trackedPeers) {
+                if (peer.RoomStates[newCoord.room] == RoomState.Abstract) {
+                    UnloadObject(peer, self.ID.number);
+                }
+            }
+        }
     }
 
     // Load an object if it's relevant to the client
@@ -186,8 +209,6 @@ sealed class ServerRoomLogic
     private void Realize(TrackedPeer peer, AbstractRoom room)
     {
         if (peer.RoomStates[room.index] == RoomState.Abstract) {
-            Main.Log.LogDebug($"Requesting player {peer.Player.ID.number} to realize {room.name}");
-
             peer.RoomStates[room.index] = RoomState.Unsynced;
             peer.RealizedRooms.Add(room.index);
 
@@ -210,6 +231,10 @@ sealed class ServerRoomLogic
 
     private void Introduce(TrackedPeer peer, PhysicalObject realizedObject)
     {
+        if (peer.RealizedObjects.Contains(realizedObject.abstractPhysicalObject.ID.number)) {
+            return;
+        }
+
         peer.RealizedObjects.Add(realizedObject.abstractPhysicalObject.ID.number);
 
         int id = realizedObject.abstractPhysicalObject.ID.number;

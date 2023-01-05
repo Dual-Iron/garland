@@ -16,6 +16,12 @@ public static class Utils
         return Directory.Exists(BepInEx.Utility.CombinePaths(path));
     }
 
+    public static string DebugName(this PhysicalObject o) => o.abstractPhysicalObject.DebugName();
+    public static string DebugName(this AbstractPhysicalObject o)
+    {
+        return o is AbstractCreature creature ? $"{creature.creatureTemplate.type}#{o.ID.number}" : $"{o.type}#{o.ID.number}";
+    }
+
     public static RainWorldGame Game(this PhysicalObject o) => o.abstractPhysicalObject.world.game;
 
     public static PlayerState PlayerState(this AbstractCreature creature)

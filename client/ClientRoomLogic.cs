@@ -37,6 +37,7 @@ sealed class ClientRoomLogic
                 obj.abstractPhysicalObject.Destroy();
                 obj.Destroy();
                 session.Objects.Remove(packet.ID);
+                Main.Log.LogDebug($"Server destroyed {obj.DebugName()}");
             }
         }
 
@@ -46,7 +47,7 @@ sealed class ClientRoomLogic
 
         foreach (var packet in KillCreature.All()) {
             if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Creature crit) {
-                Main.Log.LogDebug($"Server killed {obj.abstractPhysicalObject.type} #{packet.ID}");
+                Main.Log.LogDebug($"Server killed {obj.DebugName()}");
                 crit.Die();
             }
         }
@@ -55,8 +56,6 @@ sealed class ClientRoomLogic
     private void IntroduceStuff()
     {
         foreach (var packet in IntroPlayer.All()) {
-            Main.Log.LogDebug($"Introduced player {packet.ID}");
-
             // Set this before realizing player (so slugcatStats is not null)
             session.ClientData[packet.ID] = new SharedPlayerData() {
                 SkinColor = new UnityEngine.Color32(packet.SkinR, packet.SkinG, packet.SkinB, 255),
@@ -94,30 +93,8 @@ sealed class ClientRoomLogic
     {
         foreach (var packet in UpdatePlayer.All()) {
             if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Player p) {
-                p.firstChunk.pos = Vec.Lerp(p.firstChunk.pos, packet.HeadPos, 0.8f);
-                p.firstChunk.vel = packet.HeadVel;
-                p.bodyChunks[1].pos = Vec.Lerp(p.bodyChunks[1].pos, packet.ButtPos, 0.8f);
-                p.bodyChunks[1].vel = packet.ButtVel;
-
-                p.standing = packet.Standing;
-                p.bodyMode = (Player.BodyModeIndex)packet.BodyMode;
-                p.animation = (Player.AnimationIndex)packet.Animation;
-
                 session.LastInput[packet.ID] = new(packet.InputDir0, packet.InputBitmask0);
-
-                // Don't set own inputs
-                if (packet.ID != session.ClientPid) {
-                    p.input[0] = new Input(packet.InputDir0, packet.InputBitmask0).ToPackage();
-                    p.input[1] = new Input(packet.InputDir1, packet.InputBitmask1).ToPackage();
-                    p.input[2] = new Input(packet.InputDir2, packet.InputBitmask2).ToPackage();
-                    p.input[3] = new Input(packet.InputDir3, packet.InputBitmask3).ToPackage();
-                    p.input[4] = new Input(packet.InputDir4, packet.InputBitmask4).ToPackage();
-                    p.input[5] = new Input(packet.InputDir5, packet.InputBitmask5).ToPackage();
-                    p.input[6] = new Input(packet.InputDir6, packet.InputBitmask6).ToPackage();
-                    p.input[7] = new Input(packet.InputDir7, packet.InputBitmask7).ToPackage();
-                    p.input[8] = new Input(packet.InputDir8, packet.InputBitmask8).ToPackage();
-                    p.input[9] = new Input(packet.InputDir9, packet.InputBitmask9).ToPackage();
-                }
+                session.UpdatePlayerCache[packet.ID] = packet;
             }
         }
     }

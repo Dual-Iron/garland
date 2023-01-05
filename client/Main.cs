@@ -26,7 +26,13 @@ partial class Main
         };
         listener.PeerDisconnectedEvent += (peer, info) => {
             ClientState = ConnectionState.Disconnected;
-            Log.LogDebug($"Disconnected ({info.Reason})");
+
+            if (info.AdditionalData.TryGetString(out string explanation)) {
+                Log.LogDebug($"Disconnected: {explanation}");
+            }
+            else {
+                Log.LogDebug($"Disconnected ({info.Reason})");
+            }
         };
         Client = new(listener);
     }

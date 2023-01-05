@@ -1,6 +1,7 @@
 ﻿using BepInEx.Logging;
 using Common;
 using LiteNetLib;
+using LiteNetLib.Utils;
 using System;
 using UnityEngine;
 
@@ -49,10 +50,17 @@ partial class Main
             ClientJustJoined = true;
 
             DateTime now = DateTime.UtcNow;
-            Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
+            Log.LogDebug($"Connected to {peer.EndPoint} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
             if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
-                var player = session.Join(peer, peer.EndPoint.Address.ToString());
+                string hash = peer.EndPoint.ToString();
+
+                if (session.AnyPeerConnectedTo(hash)) {
+                    peer.Disconnect(NetDataWriter.FromString("Another client has already joined with that login."));
+                    return;
+                }
+
+                var player = session.Join(peer, hash);
                 if (player.realizedObject == null) {
                     player.Room.AddEntity(player);
                     player.RealizeInRoom();
@@ -64,7 +72,11 @@ partial class Main
             }
         };
         listener.PeerDisconnectedEvent += (peer, info) => {
-            Log.LogDebug($"Disconnected from {peer.EndPoint.Address}: {info.Reason}");
+            Log.LogDebug($"Disconnected from {peer.EndPoint}: {info.Reason}");
+
+            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
+                session.Leave(peer);
+            }
         };
 
         server.Start(port);

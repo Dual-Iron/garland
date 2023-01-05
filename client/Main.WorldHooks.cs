@@ -16,11 +16,6 @@ partial class Main
 
         // Fix SlugcatWorld
         On.RoomSettings.ctor += RoomSettings_ctor;
-
-        On.AbstractRoom.AddEntity += (orig, self, ent) => {
-            Log.LogDebug($"{self.name,-7} added {ent}");
-            orig(self, ent);
-        };
     }
 
     private readonly Func<Func<RainWorldGame, Setup>, RainWorldGame, Setup> getSetupValues = (orig, game) => {
