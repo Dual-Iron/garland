@@ -22,7 +22,7 @@ partial class Main
 
     private void GlobalRain_Update(On.GlobalRain.orig_Update orig, GlobalRain self)
     {
-        self.floodSpeed = 0.2f;
+        self.floodSpeed = 0.1f;
 
         float rainDirectionGetToLast = self.rainDirectionGetTo;
 

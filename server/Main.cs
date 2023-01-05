@@ -52,9 +52,11 @@ partial class Main
             Log.LogDebug($"Connected to {peer.EndPoint.Address} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
             if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
-                var player = session.Join(peer, peer.EndPoint.ToString());
-                player.Room.AddEntity(player);
-                player.RealizeInRoom();
+                var player = session.Join(peer, peer.EndPoint.Address.ToString());
+                if (player.realizedObject == null) {
+                    player.Room.AddEntity(player);
+                    player.RealizeInRoom();
+                }
 
                 EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, player.ID.number, ServerConfig.StartingRoom);
 
@@ -72,6 +74,7 @@ partial class Main
 
     public void Hook()
     {
+        ObjectHooks();
         SessionHooks();
         GameHooks();
 

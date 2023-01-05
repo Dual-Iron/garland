@@ -144,6 +144,13 @@ public sealed class PacketQueue<T> where T : struct
         awaiting.Dequeue().Deconstruct(out sender, out packet);
         return true;
     }
+
+    public IEnumerable<T> Drain()
+    {
+        while (awaiting.Count > 0) {
+            yield return awaiting.Dequeue().Packet;
+        }
+    }
 }
 
 public interface IPacket : INetSerializable

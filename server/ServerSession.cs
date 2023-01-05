@@ -23,9 +23,10 @@ sealed class ServerSession : GameSession
 
     public readonly byte SlugcatWorld;
     public readonly ServerRoomLogic RoomRealizer;
+    public readonly List<Common.Input> LastInput = new();
 
-    // TODO: Save and load serverData, hashToPid, pos, and playerState for each player at the end/start of each session.
-    // Fill Players as soon as possible after the session starts.
+    // TODO: Save and load hashToPid, serverData, pos, and playerState for each player at the end/start of each session.
+    // Players that don't connect for the entire cycle just don't lose any hunger and stay put.
 
     // Each player has one Player ID (PID).
     // They start at 0 and increase from there, so they can be accessed in a list.
@@ -52,8 +53,8 @@ sealed class ServerSession : GameSession
         Color color = RXColor.ColorFromHSL(hue, saturation, luminosity);
 
         return new() {
-            stats = new SlugcatStats(slugcatNumber: 0, malnourished: false),
-            skinColor = color,
+            Stats = new SlugcatStats(slugcatNumber: 0, malnourished: false),
+            SkinColor = color,
         };
     }
 
@@ -70,6 +71,7 @@ sealed class ServerSession : GameSession
             hashToPid[hash] = pid = serverData.Count;
 
             serverData.Add(CreateNewPlayerData(hash, pid));
+            LastInput.Add(default);
 
             // TODO: then save immediately
 
@@ -95,6 +97,11 @@ sealed class ServerSession : GameSession
         }
 
         return crit;
+    }
+
+    public void SendObjectUpdate<T>(PhysicalObject o, T packet) where T : IPacket
+    {
+        RoomRealizer.ObjectUpdate(o, packet);
     }
 
     public override void AddPlayer(AbstractCreature player)
@@ -123,4 +130,7 @@ static class SessionExt
 
         return session.GetPlayerData(player.abstractPhysicalObject.ID.number);
     }
+
+    public static ServerSession Session(this PhysicalObject o) => (ServerSession)o.Game().session;
+    public static ServerSession Session(this RainWorldGame game) => (ServerSession)game.session;
 }

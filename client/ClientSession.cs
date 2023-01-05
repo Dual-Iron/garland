@@ -15,27 +15,23 @@ sealed class ClientSession : GameSession
     public readonly byte SlugcatWorld;
     public readonly int ClientPid;
     public readonly ClientRoomLogic RoomRealizer;
-
-    readonly Dictionary<int, int> pidToLocalID = new();
-    readonly List<SharedPlayerData> clientData = new();
+    public readonly Dictionary<int, PhysicalObject> Objects = new();
+    public readonly Dictionary<int, SharedPlayerData> ClientData = new();
+    public readonly Dictionary<int, Input> LastInput = new();
 
     public override void AddPlayer(AbstractCreature player)
     {
-        if (player.ID.number >= 0) {
-            pidToLocalID[player.ID.number] = Players.Count;
-
-            clientData.Add(new());
+        if (player.ID.number == ClientPid) {
+            base.AddPlayer(player);
         }
-
-        base.AddPlayer(player);
     }
 
-    public SharedPlayerData? GetPlayerData(int pid) => pidToLocalID.TryGetValue(pid, out int localID) ? clientData[localID] : null;
+    public SharedPlayerData? GetPlayerData(int pid) => ClientData.TryGetValue(pid, out var data) ? data : null;
     public SharedPlayerData? GetPlayerData(EntityID eid) => GetPlayerData(eid.number);
     public SharedPlayerData? GetPlayerData(AbstractCreature player) => GetPlayerData(player.ID.number);
 
-    public AbstractCreature? MyPlayer => pidToLocalID.TryGetValue(ClientPid, out int id) ? Players[id] : null;
-    public SharedPlayerData? MyPlayerData => pidToLocalID.TryGetValue(ClientPid, out int id) ? clientData[id] : null;
+    public AbstractCreature? MyPlayer => Players.Count > 0 ? Players[0] : null;
+    public SharedPlayerData? MyPlayerData => Players.Count > 0 ? ClientData[0] : null;
 }
 
 static class ClientExt

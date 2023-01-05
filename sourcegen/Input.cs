@@ -20,7 +20,7 @@ EnterSession = 0x200 {
     str StartingRoom
 }
 
-# Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.2.
+# Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.1 value.
 SyncRain = 0x201 {
     u16 RainTimer
     u16 RainTimerMax
@@ -62,7 +62,7 @@ DestroyObject = 0x206 {
 # Tells a client that a creature is inside a shortcut. TODO (high-priority)
 SyncShortcut = 0x207 {
     i32    CreatureID
-    i32    RoomID
+    i32    Room
     i32    EntranceNode
     i32    Wait
     ivec[] Positions
@@ -71,6 +71,7 @@ SyncShortcut = 0x207 {
 # Introduces a player to the client. TODO (next)
 IntroPlayer = 0x210 {
     i32  ID
+    i32  Room
     u8   SkinR
     u8   SkinG
     u8   SkinB
@@ -83,19 +84,41 @@ IntroPlayer = 0x210 {
     f32  VisBonus
     f32  Stealth
     u8   ThrowingSkill
-    bool Ill
+    u8   SleepFood
+    u8   MaxFood
+    u8   Bitmask { Ill = 0x1, Glows = 0x2, HasMark = 0x4 }
 }
 
 # Updates a player for a client.
 UpdatePlayer = 0x211 {
     i32 ID
-    i32 Room
+    bool Standing
+    u8  BodyMode
+    u8  Animation
     vec HeadPos
     vec HeadVel
     vec ButtPos
     vec ButtVel
-    vec InputDir
-    u8  InputBitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8 }
+    vec InputDir0
+    vec InputDir1
+    vec InputDir2
+    vec InputDir3
+    vec InputDir4
+    vec InputDir5
+    vec InputDir6
+    vec InputDir7
+    vec InputDir8
+    vec InputDir9
+    u8  InputBitmask0
+    u8  InputBitmask1
+    u8  InputBitmask2
+    u8  InputBitmask3
+    u8  InputBitmask4
+    u8  InputBitmask5
+    u8  InputBitmask6
+    u8  InputBitmask7
+    u8  InputBitmask8
+    u8  InputBitmask9
 }
 
 """;

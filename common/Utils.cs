@@ -16,6 +16,8 @@ public static class Utils
         return Directory.Exists(BepInEx.Utility.CombinePaths(path));
     }
 
+    public static RainWorldGame Game(this PhysicalObject o) => o.abstractPhysicalObject.world.game;
+
     public static PlayerState PlayerState(this AbstractCreature creature)
     {
         return (PlayerState)creature.state;

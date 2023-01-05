@@ -12,6 +12,7 @@ partial class Main
     public static ManualLogSource Log { get; } = Logger.CreateLogSource("Client");
 
     public NetManager Client { get; }
+    public NetPeer? ServerPeer => Client.FirstPeer;
     public ConnectionState ClientState { get; private set; }
     public EnterSession? startPacket;
 
@@ -50,6 +51,7 @@ partial class Main
 
     public void Hook()
     {
+        ObjectHooks();
         WorldHooks();
         GameHooks();
         MenuHooks();

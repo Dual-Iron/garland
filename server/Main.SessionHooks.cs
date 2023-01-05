@@ -38,7 +38,7 @@ partial class Main
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
-    private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats?> getSlugcatStats = (orig, self) => self.Data()?.stats;
+    private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats?> getSlugcatStats = (orig, self) => self.Data()?.Stats;
 
     private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
 

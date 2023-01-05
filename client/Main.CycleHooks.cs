@@ -11,14 +11,14 @@ partial class Main
 
     private void GlobalRain_Update(On.GlobalRain.orig_Update orig, GlobalRain self)
     {
-        self.floodSpeed = 0.2f;
+        if (self.deathRain != null)
+            self.floodSpeed = 0.1f;
 
         orig(self);
 
         RainCycle rainCycle = self.game.world.rainCycle;
 
         if (SyncRain.Latest(out var syncRain)) {
-            Log.LogDebug(syncRain);
             syncRain.Deconstruct(out var timer, out var cycleLength, out self.rainDirection, out self.rainDirectionGetTo);
 
             rainCycle.timer = timer;
@@ -26,7 +26,6 @@ partial class Main
         }
 
         if (SyncDeathRain.Latest(out var deathRain)) {
-            Log.LogDebug(deathRain);
             if (!rainCycle.deathRainHasHit) {
                 rainCycle.deathRainHasHit = true;
                 rainCycle.RainHit();

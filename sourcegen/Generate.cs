@@ -253,11 +253,14 @@ struct PacketField
         "str" => "string",
         "bool" => "bool",
         "u8" => "byte",
+        "u8[]" => "byte[]",
         "u16" => "ushort",
         "u32" => "uint",
         "i32" => "int",
         "f32" => "float",
         "vec" => "Vector2",
+        "vec[]" => "Vector2[]",
+        "ivec" => "IntVector2",
         "ivec[]" => "IntVector2[]",
         _ => throw new ArgumentException()
     };
@@ -266,11 +269,14 @@ struct PacketField
         "str" => "GetString()",
         "bool" => "GetBool()",
         "u8" => "GetByte()",
+        "u8[]" => "GetByteArray()",
         "u16" => "GetUShort()",
         "u32" => "GetUInt()",
         "i32" => "GetInt()",
         "f32" => "GetFloat()",
         "vec" => "GetVec()",
+        "vec[]" => "GetVecArray()",
+        "ivec" => "GetIVec()",
         "ivec[]" => "GetIVecArray()",
         _ => throw new ArgumentException()
     };

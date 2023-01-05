@@ -1,4 +1,5 @@
 ﻿using Common;
+using HUD;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
@@ -27,6 +28,7 @@ partial class Main
         On.OverWorld.ctor += OverWorld_ctor;
         On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.World.ctor += World_ctor;
+        On.HUD.HUD.InitSinglePlayerHud += HUD_InitSinglePlayerHud;
         IL.RainWorldGame.Update += FixPauseAndCrash; // Custom pause menu logic
         IL.RainWorldGame.GrafUpdate += FixPause; // Custom pause menu logic
 
@@ -34,8 +36,26 @@ partial class Main
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
+    private void HUD_InitSinglePlayerHud(On.HUD.HUD.orig_InitSinglePlayerHud orig, HUD.HUD self, RoomCamera cam)
+    {
+        if (self.owner is Player p && p.Game().session is ClientSession) {
+            self.AddPart(new TextPrompt(self));
+            self.AddPart(new KarmaMeter(self, self.fContainers[1], new IntVector2(p.Karma, p.KarmaCap), p.KarmaIsReinforced));
+            self.AddPart(new FoodMeter(self, p.slugcatStats.maxFood, p.slugcatStats.foodToHibernate));
+            self.AddPart(new RainMeter(self, self.fContainers[1]));
+            if (cam.room.abstractRoom.shelter) {
+                self.karmaMeter.fade = 1f;
+                self.rainMeter.fade = 1f;
+                self.foodMeter.fade = 1f;
+            }
+        }
+        else {
+            orig(self, cam);
+        }
+    }
+
     private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => {
-        return self.Data()?.stats ?? orig(self);
+        return self.Data()?.Stats ?? orig(self);
     };
 
     private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;

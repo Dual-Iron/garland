@@ -12,7 +12,7 @@ public enum PacketKind : ushort
     Input = 0x100,
     /// <summary>Sent to clients joining a game session.</summary>
     EnterSession = 0x200,
-    /// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.2.</summary>
+    /// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.1 value.</summary>
     SyncRain = 0x201,
     /// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.</summary>
     SyncDeathRain = 0x202,
@@ -129,7 +129,7 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Cli
     }
 }
 
-/// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.2.</summary>
+/// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.1 value.</summary>
 public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainDirection, float RainDirectionGetTo) : IPacket
 {
     public static PacketQueue<SyncRain> Queue { get; } = new();
@@ -280,7 +280,7 @@ public record struct DestroyObject(int ID) : IPacket
 }
 
 /// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
-public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, int Wait, IntVector2[] Positions) : IPacket
+public record struct SyncShortcut(int CreatureID, int Room, int EntranceNode, int Wait, IntVector2[] Positions) : IPacket
 {
     public static PacketQueue<SyncShortcut> Queue { get; } = new();
 
@@ -291,7 +291,7 @@ public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, 
     public void Deserialize(NetDataReader reader)
     {
         CreatureID = reader.GetInt();
-        RoomID = reader.GetInt();
+        Room = reader.GetInt();
         EntranceNode = reader.GetInt();
         Wait = reader.GetInt();
         Positions = reader.GetIVecArray();
@@ -301,7 +301,7 @@ public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(CreatureID);
-        writer.Put(RoomID);
+        writer.Put(Room);
         writer.Put(EntranceNode);
         writer.Put(Wait);
         writer.Put(Positions);
@@ -310,7 +310,7 @@ public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, 
 }
 
 /// <summary>Introduces a player to the client. TODO (next)</summary>
-public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float BodyWeight, float Lungs, float Loudness, float VisBonus, float Stealth, byte ThrowingSkill, bool Ill) : IPacket
+public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte SkinB, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float BodyWeight, float Lungs, float Loudness, float VisBonus, float Stealth, byte ThrowingSkill, byte SleepFood, byte MaxFood, byte Bitmask) : IPacket
 {
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
 
@@ -321,6 +321,7 @@ public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, flo
     public void Deserialize(NetDataReader reader)
     {
         ID = reader.GetInt();
+        Room = reader.GetInt();
         SkinR = reader.GetByte();
         SkinG = reader.GetByte();
         SkinB = reader.GetByte();
@@ -333,13 +334,16 @@ public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, flo
         VisBonus = reader.GetFloat();
         Stealth = reader.GetFloat();
         ThrowingSkill = reader.GetByte();
-        Ill = reader.GetBool();
+        SleepFood = reader.GetByte();
+        MaxFood = reader.GetByte();
+        Bitmask = reader.GetByte();
 
     }
 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(ID);
+        writer.Put(Room);
         writer.Put(SkinR);
         writer.Put(SkinG);
         writer.Put(SkinB);
@@ -352,13 +356,25 @@ public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, flo
         writer.Put(VisBonus);
         writer.Put(Stealth);
         writer.Put(ThrowingSkill);
-        writer.Put(Ill);
+        writer.Put(SleepFood);
+        writer.Put(MaxFood);
+        writer.Put(Bitmask);
 
     }
+
+    public static byte ToBitmask(bool Ill, bool Glows, bool HasMark)
+    {
+        return (byte)((Ill ? 0x1 : 0) | (Glows ? 0x2 : 0) | (HasMark ? 0x4 : 0));
+    }
+
+    public bool Ill => (Bitmask & 0x1) != 0;
+    public bool Glows => (Bitmask & 0x2) != 0;
+    public bool HasMark => (Bitmask & 0x4) != 0;
+
 }
 
 /// <summary>Updates a player for a client.</summary>
-public record struct UpdatePlayer(int ID, int Room, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir, byte InputBitmask) : IPacket
+public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Animation, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir0, Vector2 InputDir1, Vector2 InputDir2, Vector2 InputDir3, Vector2 InputDir4, Vector2 InputDir5, Vector2 InputDir6, Vector2 InputDir7, Vector2 InputDir8, Vector2 InputDir9, byte InputBitmask0, byte InputBitmask1, byte InputBitmask2, byte InputBitmask3, byte InputBitmask4, byte InputBitmask5, byte InputBitmask6, byte InputBitmask7, byte InputBitmask8, byte InputBitmask9) : IPacket
 {
     public static PacketQueue<UpdatePlayer> Queue { get; } = new();
 
@@ -369,38 +385,67 @@ public record struct UpdatePlayer(int ID, int Room, Vector2 HeadPos, Vector2 Hea
     public void Deserialize(NetDataReader reader)
     {
         ID = reader.GetInt();
-        Room = reader.GetInt();
+        Standing = reader.GetBool();
+        BodyMode = reader.GetByte();
+        Animation = reader.GetByte();
         HeadPos = reader.GetVec();
         HeadVel = reader.GetVec();
         ButtPos = reader.GetVec();
         ButtVel = reader.GetVec();
-        InputDir = reader.GetVec();
-        InputBitmask = reader.GetByte();
+        InputDir0 = reader.GetVec();
+        InputDir1 = reader.GetVec();
+        InputDir2 = reader.GetVec();
+        InputDir3 = reader.GetVec();
+        InputDir4 = reader.GetVec();
+        InputDir5 = reader.GetVec();
+        InputDir6 = reader.GetVec();
+        InputDir7 = reader.GetVec();
+        InputDir8 = reader.GetVec();
+        InputDir9 = reader.GetVec();
+        InputBitmask0 = reader.GetByte();
+        InputBitmask1 = reader.GetByte();
+        InputBitmask2 = reader.GetByte();
+        InputBitmask3 = reader.GetByte();
+        InputBitmask4 = reader.GetByte();
+        InputBitmask5 = reader.GetByte();
+        InputBitmask6 = reader.GetByte();
+        InputBitmask7 = reader.GetByte();
+        InputBitmask8 = reader.GetByte();
+        InputBitmask9 = reader.GetByte();
 
     }
 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(ID);
-        writer.Put(Room);
+        writer.Put(Standing);
+        writer.Put(BodyMode);
+        writer.Put(Animation);
         writer.Put(HeadPos);
         writer.Put(HeadVel);
         writer.Put(ButtPos);
         writer.Put(ButtVel);
-        writer.Put(InputDir);
-        writer.Put(InputBitmask);
+        writer.Put(InputDir0);
+        writer.Put(InputDir1);
+        writer.Put(InputDir2);
+        writer.Put(InputDir3);
+        writer.Put(InputDir4);
+        writer.Put(InputDir5);
+        writer.Put(InputDir6);
+        writer.Put(InputDir7);
+        writer.Put(InputDir8);
+        writer.Put(InputDir9);
+        writer.Put(InputBitmask0);
+        writer.Put(InputBitmask1);
+        writer.Put(InputBitmask2);
+        writer.Put(InputBitmask3);
+        writer.Put(InputBitmask4);
+        writer.Put(InputBitmask5);
+        writer.Put(InputBitmask6);
+        writer.Put(InputBitmask7);
+        writer.Put(InputBitmask8);
+        writer.Put(InputBitmask9);
 
     }
-
-    public static byte ToInputBitmask(bool Jump, bool Throw, bool Pickup, bool Point)
-    {
-        return (byte)((Jump ? 0x1 : 0) | (Throw ? 0x2 : 0) | (Pickup ? 0x4 : 0) | (Point ? 0x8 : 0));
-    }
-
-    public bool Jump => (InputBitmask & 0x1) != 0;
-    public bool Throw => (InputBitmask & 0x2) != 0;
-    public bool Pickup => (InputBitmask & 0x4) != 0;
-    public bool Point => (InputBitmask & 0x8) != 0;
-
 }
 

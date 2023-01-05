@@ -33,6 +33,17 @@ sealed class ServerRoomLogic
 
     // TODO: re-abstractizing rooms lol
 
+    public void ObjectUpdate<T>(PhysicalObject p, T packet) where T : IPacket
+    {
+        int roomIndex = p.abstractPhysicalObject.pos.room;
+
+        foreach (TrackedPeer peer in trackedPeers) {
+            if (peer.RoomStates[roomIndex] == RoomState.Synced) {
+                peer.NetPeer.Send(packet, DeliveryMethod.ReliableSequenced);
+            }
+        }
+    }
+
     public ServerRoomLogic(RainWorldGame game, ServerSession session)
     {
         this.game = game;
@@ -68,7 +79,6 @@ sealed class ServerRoomLogic
     {
         if (peer.RoomStates[o.abstractPhysicalObject.Room.index] == RoomState.Synced) {
             Introduce(peer, o);
-            Update(peer, o);
         }
     }
 
@@ -137,9 +147,6 @@ sealed class ServerRoomLogic
                     peer.RoomStates[roomIndex] = RoomState.Synced;
 
                     Introduce(peer, room.realizedRoom);
-                }
-                if (peer.RoomStates[roomIndex] == RoomState.Synced) {
-                    Update(peer, room.realizedRoom);
                 }
                 if (peer.Player.Room.index == roomIndex) {
                     rooms[roomIndex].LastVisit = game.clock;
@@ -210,49 +217,24 @@ sealed class ServerRoomLogic
             SharedPlayerData data = p.Data() ?? new();
             IntroPlayer intro = new() {
                 ID = id,
-                SkinR = data.skinColor.r,
-                SkinG = data.skinColor.g,
-                SkinB = data.skinColor.b,
-                RunSpeed = data.stats.runspeedFac,
-                PoleClimbSpeed = data.stats.poleClimbSpeedFac,
-                CorridorClimbSpeed = data.stats.corridorClimbSpeedFac,
-                BodyWeight = data.stats.bodyWeightFac,
-                Lungs = data.stats.lungsFac,
-                Loudness = data.stats.loudnessFac,
-                Stealth = data.stats.visualStealthInSneakMode,
-                VisBonus = data.stats.generalVisibilityBonus,
-                ThrowingSkill = (byte)data.stats.throwingSkill,
-                Ill = data.stats.malnourished,
+                Room = p.abstractPhysicalObject.Room.index,
+                SkinR = data.SkinColor.r,
+                SkinG = data.SkinColor.g,
+                SkinB = data.SkinColor.b,
+                RunSpeed = data.Stats.runspeedFac,
+                PoleClimbSpeed = data.Stats.poleClimbSpeedFac,
+                CorridorClimbSpeed = data.Stats.corridorClimbSpeedFac,
+                BodyWeight = data.Stats.bodyWeightFac,
+                Lungs = data.Stats.lungsFac,
+                Loudness = data.Stats.loudnessFac,
+                Stealth = data.Stats.visualStealthInSneakMode,
+                VisBonus = data.Stats.generalVisibilityBonus,
+                ThrowingSkill = (byte)data.Stats.throwingSkill,
+                SleepFood = (byte)data.Stats.foodToHibernate,
+                MaxFood = (byte)data.Stats.maxFood,
+                Bitmask = IntroPlayer.ToBitmask(data.Stats.malnourished, Glows: false, HasMark: false),
             };
             peer.NetPeer.Send(intro);
-        }
-    }
-
-    private void Update(TrackedPeer peer, Room room)
-    {
-        foreach (var entity in room.abstractRoom.entities) {
-            if (entity is AbstractPhysicalObject apo && apo.realizedObject != null) {
-                Update(peer, apo.realizedObject);
-            }
-        }
-    }
-
-    private void Update(TrackedPeer peer, PhysicalObject realizedObject)
-    {
-        int id = realizedObject.abstractPhysicalObject.ID.number;
-        if (realizedObject is Player p) {
-            Input input = p.input[0].ToPacket();
-            UpdatePlayer update = new() {
-                ID = id,
-                Room = p.abstractCreature.Room.index,
-                HeadPos = p.firstChunk.pos,
-                HeadVel = p.firstChunk.vel,
-                ButtPos = p.bodyChunks[1].pos,
-                ButtVel = p.bodyChunks[1].vel,
-                InputDir = input.Dir,
-                InputBitmask = input.Bitmask,
-            };
-            peer.NetPeer.Send(update, DeliveryMethod.ReliableSequenced);
         }
     }
 }
