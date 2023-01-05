@@ -96,6 +96,25 @@ partial class Main
         // Small optimization
         On.SoundLoader.ShouldSoundPlay += delegate { return false; };
         // TODO see if this works...? On.RainWorldGame.GrafUpdate += delegate { };
+
+        ManualLogSource unityLog = Logger.CreateLogSource("Unity");
+        Application.RegisterLogCallback((message, stackTrace, type) => {
+            switch (type) {
+                case LogType.Error:
+                case LogType.Assert:
+                    unityLog.LogError(message);
+                    break;
+                case LogType.Exception:
+                    unityLog.LogError(message + $"\nStack trace:\n{stackTrace}");
+                    break;
+                case LogType.Warning:
+                    unityLog.LogWarning(message);
+                    break;
+                default:
+                    unityLog.LogInfo(message);
+                    break;
+            }
+        });
     }
 
     private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)

@@ -257,7 +257,7 @@ sealed class ServerRoomLogic
                 ThrowingSkill = (byte)data.Stats.throwingSkill,
                 SleepFood = (byte)data.Stats.foodToHibernate,
                 MaxFood = (byte)data.Stats.maxFood,
-                Bitmask = IntroPlayer.ToBitmask(data.Stats.malnourished, Glows: false, HasMark: false),
+                Bitmask = IntroPlayer.ToBitmask(data.Stats.malnourished, data.EatsMeat, data.Glows, data.HasMark),
             };
             peer.NetPeer.Send(intro);
         }

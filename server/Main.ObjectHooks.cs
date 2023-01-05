@@ -13,6 +13,9 @@ partial class Main
         On.Room.Update += Room_Update;
         On.RWInput.PlayerInput += RWInput_PlayerInput;
 
+        // Allow omnivorous players to eat meat
+        On.Player.CanEatMeat += Player_CanEatMeat;
+
         // Sync client players
         On.Player.Update += Player_Update;
     }
@@ -43,6 +46,11 @@ partial class Main
             return g.Session().LastInput[playerNumber].ToPackage();
         }
         return default;
+    }
+
+    private bool Player_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
+    {
+        return orig(self, crit) || self.Data()?.EatsMeat == true;
     }
 
     private void Player_Update(On.Player.orig_Update orig, Player p, bool eu)

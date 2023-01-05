@@ -93,7 +93,7 @@ IntroPlayer = 0x210 {
     u8   ThrowingSkill
     u8   SleepFood
     u8   MaxFood
-    u8   Bitmask { Ill = 0x1, Glows = 0x2, HasMark = 0x4 }
+    u8   Bitmask { Ill = 0x1, EatsMeat = 0x2, Glows = 0x4, HasMark = 0x8 }
 }
 
 # Updates a player for a client.

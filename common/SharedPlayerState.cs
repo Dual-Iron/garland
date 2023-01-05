@@ -8,4 +8,5 @@ sealed class SharedPlayerData
     public Color32 SkinColor = Color.white;
     public bool Glows = false;
     public bool HasMark = false;
+    public bool EatsMeat = false;
 }

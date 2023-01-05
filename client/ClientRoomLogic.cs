@@ -1,5 +1,4 @@
 ﻿using Common;
-using Vec = UnityEngine.Vector2;
 
 namespace Client;
 
@@ -24,7 +23,6 @@ sealed class ClientRoomLogic
         }
 
         foreach (var packet in RealizeRoom.All()) {
-            Main.Log.LogDebug($"Respecting request to realize {game.world.GetAbstractRoom(packet.Index).name}");
             game.world.ActivateRoom(packet.Index);
         }
 
@@ -34,10 +32,11 @@ sealed class ClientRoomLogic
 
         foreach (var packet in DestroyObject.All()) {
             if (session.Objects.TryGetValue(packet.ID, out var obj) && !obj.slatedForDeletetion) {
+                Main.Log.LogDebug($"Server destroyed {obj.DebugName()}");
+
                 obj.abstractPhysicalObject.Destroy();
                 obj.Destroy();
                 session.Objects.Remove(packet.ID);
-                Main.Log.LogDebug($"Server destroyed {obj.DebugName()}");
             }
         }
 
@@ -48,6 +47,7 @@ sealed class ClientRoomLogic
         foreach (var packet in KillCreature.All()) {
             if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Creature crit) {
                 Main.Log.LogDebug($"Server killed {obj.DebugName()}");
+
                 crit.Die();
             }
         }
@@ -59,6 +59,7 @@ sealed class ClientRoomLogic
             // Set this before realizing player (so slugcatStats is not null)
             session.ClientData[packet.ID] = new SharedPlayerData() {
                 SkinColor = new UnityEngine.Color32(packet.SkinR, packet.SkinG, packet.SkinB, 255),
+                EatsMeat = packet.EatsMeat,
                 HasMark = packet.HasMark, // TODO HasMark and other graphical/non-graphical changes
                 Glows = packet.Glows,
                 Stats = new SlugcatStats(0, false) {
@@ -78,7 +79,7 @@ sealed class ClientRoomLogic
             };
 
             AbstractCreature p = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, new(packet.Room, 0, 0, -1), new(-1, packet.ID));
-            p.state = new PlayerState(p, packet.ID, 0, false);
+            p.state = new PlayerState(p, playerNumber: packet.ID, slugcatCharacter: packet.ID, false);
             p.Room.AddEntity(p);
             p.RealizeInRoom();
 

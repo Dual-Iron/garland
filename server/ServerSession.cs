@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Rng = UnityEngine.Random;
+using static UnityEngine.Mathf;
 
 namespace Server;
 
@@ -40,17 +42,57 @@ sealed class ServerSession : GameSession
 
     private SharedPlayerData CreateNewPlayerData(string hash, int pid)
     {
-        int hashCode = hash.GetHashCode();
+        int seed = Rng.seed;
+        Rng.seed = hash.GetHashCode();
 
-        float hue = Mathf.Pow(Utils.SeededRandom(hashCode), 3f); // Pow to make hotter colors more common
-        float saturation = 0.6f + 0.4f * Utils.SeededRandom(hashCode);
-        float luminosity = 0.8f + 0.2f * Utils.SeededRandom(hashCode);
+        float hue = Pow(Rng.value, 3f); // Pow to make hotter colors more common
+        float saturation = Lerp(1f, 0.8f, Rng.value * Rng.value);
+        float luminosity = Lerp(1f, 0.5f, Rng.value * Rng.value);
 
         Color color = RXColor.ColorFromHSL(hue, saturation, luminosity);
 
+        SlugcatStats stats = new(slugcatNumber: 0, malnourished: false);
+
+        float fat = Lerp(-0.1f, 0.15f, Rng.value);
+        float speed = Lerp(-0.05f, 0.1f, Rng.value);
+        float sneakiness = Lerp(-0.15f, 0.15f, Rng.value);
+
+        stats.runspeedFac += speed - fat * 0.5f;
+        stats.poleClimbSpeedFac += speed * 1.5f - fat * 0.5f;
+        stats.corridorClimbSpeedFac += speed - fat * 0.5f;
+        stats.generalVisibilityBonus -= sneakiness;
+        stats.visualStealthInSneakMode += sneakiness;
+        stats.loudnessFac += fat * 2 - sneakiness;
+        stats.lungsFac += Lerp(-0.2f, 0.1f, Rng.value - speed);
+        stats.bodyWeightFac += fat;
+
+        stats.foodToHibernate += (int)(speed * 30 + fat * 5);
+        stats.maxFood += (int)(fat * 30);
+
+        if (stats.maxFood < stats.foodToHibernate + 1)
+            stats.maxFood = stats.foodToHibernate + 1;
+
+        static string Offset(float value) => value < 0 ? $"- {-value:F2}" : $"+ {value:F2}";
+
+        Main.Log.LogDebug($"""
+            Generated stats for player {pid}: fat {fat:P0}, speed {speed:P0}, sneakiness {sneakiness:P0}
+            run speed    {stats.runspeedFac,6:P0}
+            pole speed   {stats.poleClimbSpeedFac,6:P0}
+            tunnel speed {stats.corridorClimbSpeedFac,6:P0}
+            loudness     {stats.loudnessFac,6:P0}
+            lungs        {stats.lungsFac,6:P0}
+            weight       {stats.bodyWeightFac,6:P0}
+            vis bonus    {Offset(stats.generalVisibilityBonus),6}
+            stealth      {Offset(stats.visualStealthInSneakMode - 0.5f),6}
+            """);
+
+        Rng.seed = seed;
         return new() {
-            Stats = new SlugcatStats(slugcatNumber: 0, malnourished: false),
+            Stats = stats,
             SkinColor = color,
+            EatsMeat = stats.foodToHibernate > 6,
+            Glows = false,
+            HasMark = false,
         };
     }
 

@@ -403,14 +403,15 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
 
     }
 
-    public static byte ToBitmask(bool Ill, bool Glows, bool HasMark)
+    public static byte ToBitmask(bool Ill, bool EatsMeat, bool Glows, bool HasMark)
     {
-        return (byte)((Ill ? 0x1 : 0) | (Glows ? 0x2 : 0) | (HasMark ? 0x4 : 0));
+        return (byte)((Ill ? 0x1 : 0) | (EatsMeat ? 0x2 : 0) | (Glows ? 0x4 : 0) | (HasMark ? 0x8 : 0));
     }
 
     public bool Ill => (Bitmask & 0x1) != 0;
-    public bool Glows => (Bitmask & 0x2) != 0;
-    public bool HasMark => (Bitmask & 0x4) != 0;
+    public bool EatsMeat => (Bitmask & 0x2) != 0;
+    public bool Glows => (Bitmask & 0x4) != 0;
+    public bool HasMark => (Bitmask & 0x8) != 0;
 
 }
 
