@@ -23,13 +23,13 @@ public enum PacketKind : ushort
     /// <summary>Tells a client to abtractize a room if it hasn't already. TODO (low-priority)</summary>
     AbstractizeRoom = 0x205,
     /// <summary>Tells a client to destroy an object if it exists. TODO</summary>
-    DestroyObject = 0x210,
+    DestroyObject = 0x206,
     /// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
-    SyncShortcut = 0x211,
+    SyncShortcut = 0x207,
     /// <summary>Introduces a player to the client. TODO (next)</summary>
-    IntroPlayer = 0x220,
+    IntroPlayer = 0x210,
     /// <summary>Updates a player for a client.</summary>
-    UpdatePlayer = 0x300,
+    UpdatePlayer = 0x211,
 
 }
 
@@ -48,10 +48,10 @@ public static partial class Packets
                 case 0x203: SyncAntiGrav.Queue.Enqueue(sender, data.Read<SyncAntiGrav>()); break;
                 case 0x204: RealizeRoom.Queue.Enqueue(sender, data.Read<RealizeRoom>()); break;
                 case 0x205: AbstractizeRoom.Queue.Enqueue(sender, data.Read<AbstractizeRoom>()); break;
-                case 0x210: DestroyObject.Queue.Enqueue(sender, data.Read<DestroyObject>()); break;
-                case 0x211: SyncShortcut.Queue.Enqueue(sender, data.Read<SyncShortcut>()); break;
-                case 0x220: IntroPlayer.Queue.Enqueue(sender, data.Read<IntroPlayer>()); break;
-                case 0x300: UpdatePlayer.Queue.Enqueue(sender, data.Read<UpdatePlayer>()); break;
+                case 0x206: DestroyObject.Queue.Enqueue(sender, data.Read<DestroyObject>()); break;
+                case 0x207: SyncShortcut.Queue.Enqueue(sender, data.Read<SyncShortcut>()); break;
+                case 0x210: IntroPlayer.Queue.Enqueue(sender, data.Read<IntroPlayer>()); break;
+                case 0x211: UpdatePlayer.Queue.Enqueue(sender, data.Read<UpdatePlayer>()); break;
 
                 default: error($"Invalid packet type: 0x{type:X}"); break;
             }
@@ -310,7 +310,7 @@ public record struct SyncShortcut(int CreatureID, int RoomID, int EntranceNode, 
 }
 
 /// <summary>Introduces a player to the client. TODO (next)</summary>
-public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float BodyWeight, float Lungs, float Loudness, float VisBonus, float Stealth, int ThrowingSkill, bool Ill) : IPacket
+public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float BodyWeight, float Lungs, float Loudness, float VisBonus, float Stealth, byte ThrowingSkill, bool Ill) : IPacket
 {
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
 
@@ -332,7 +332,7 @@ public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, flo
         Loudness = reader.GetFloat();
         VisBonus = reader.GetFloat();
         Stealth = reader.GetFloat();
-        ThrowingSkill = reader.GetInt();
+        ThrowingSkill = reader.GetByte();
         Ill = reader.GetBool();
 
     }
@@ -358,7 +358,7 @@ public record struct IntroPlayer(int ID, byte SkinR, byte SkinG, byte SkinB, flo
 }
 
 /// <summary>Updates a player for a client.</summary>
-public record struct UpdatePlayer(int Room, Vector2 HeadPos, Vector2 ButtPos, Vector2 InputDir, byte InputBitmask) : IPacket
+public record struct UpdatePlayer(int ID, int Room, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir, byte InputBitmask) : IPacket
 {
     public static PacketQueue<UpdatePlayer> Queue { get; } = new();
 
@@ -368,9 +368,12 @@ public record struct UpdatePlayer(int Room, Vector2 HeadPos, Vector2 ButtPos, Ve
 
     public void Deserialize(NetDataReader reader)
     {
+        ID = reader.GetInt();
         Room = reader.GetInt();
         HeadPos = reader.GetVec();
+        HeadVel = reader.GetVec();
         ButtPos = reader.GetVec();
+        ButtVel = reader.GetVec();
         InputDir = reader.GetVec();
         InputBitmask = reader.GetByte();
 
@@ -378,9 +381,12 @@ public record struct UpdatePlayer(int Room, Vector2 HeadPos, Vector2 ButtPos, Ve
 
     public void Serialize(NetDataWriter writer)
     {
+        writer.Put(ID);
         writer.Put(Room);
         writer.Put(HeadPos);
+        writer.Put(HeadVel);
         writer.Put(ButtPos);
+        writer.Put(ButtVel);
         writer.Put(InputDir);
         writer.Put(InputBitmask);
 

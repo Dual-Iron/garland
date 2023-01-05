@@ -2,8 +2,6 @@
 {
     // 0x100–0x1FF: Packets sent FROM client TO server
     // 0x200–0x3FF: Packets sent FROM server TO client
-    //   0x200: Creature/object introductions, misc packets
-    //   0x300: Creature/object updates
 
     // TODO non-player objects lol
 
@@ -57,12 +55,12 @@ AbstractizeRoom = 0x205 {
 }
 
 # Tells a client to destroy an object if it exists. TODO
-DestroyObject = 0x210 {
+DestroyObject = 0x206 {
     i32 ID
 }
 
 # Tells a client that a creature is inside a shortcut. TODO (high-priority)
-SyncShortcut = 0x211 {
+SyncShortcut = 0x207 {
     i32    CreatureID
     i32    RoomID
     i32    EntranceNode
@@ -71,7 +69,7 @@ SyncShortcut = 0x211 {
 }
 
 # Introduces a player to the client. TODO (next)
-IntroPlayer = 0x220 {
+IntroPlayer = 0x210 {
     i32  ID
     u8   SkinR
     u8   SkinG
@@ -84,15 +82,18 @@ IntroPlayer = 0x220 {
     f32  Loudness
     f32  VisBonus
     f32  Stealth
-    i32  ThrowingSkill
+    u8   ThrowingSkill
     bool Ill
 }
 
 # Updates a player for a client.
-UpdatePlayer = 0x300 {
+UpdatePlayer = 0x211 {
+    i32 ID
     i32 Room
     vec HeadPos
+    vec HeadVel
     vec ButtPos
+    vec ButtVel
     vec InputDir
     u8  InputBitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8 }
 }

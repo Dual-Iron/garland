@@ -29,7 +29,7 @@ sealed class ServerRoomLogic
     readonly ServerSession session;
     readonly List<TrackedPeer> trackedPeers = new();
 
-    ServerRoom[]? rooms = default;
+    ServerRoom[] rooms = default!;
 
     // TODO: re-abstractizing rooms lol
 
@@ -37,6 +37,87 @@ sealed class ServerRoomLogic
     {
         this.game = game;
         this.session = session;
+
+        On.AbstractPhysicalObject.Realize += SyncRealize;
+        On.AbstractPhysicalObject.Abstractize += SyncAbstractize;
+    }
+
+    private void SyncRealize(On.AbstractPhysicalObject.orig_Realize orig, AbstractPhysicalObject self)
+    {
+        bool actuallyRealizing = self.realizedObject == null;
+        orig(self);
+        if (actuallyRealizing && self.realizedObject != null) {
+            foreach (TrackedPeer peer in trackedPeers) {
+                LoadObject(peer, self.realizedObject);
+            }
+        }
+    }
+
+    private void SyncAbstractize(On.AbstractPhysicalObject.orig_Abstractize orig, AbstractPhysicalObject self, WorldCoordinate coord)
+    {
+        if (self.realizedObject != null) {
+            foreach (TrackedPeer peer in trackedPeers) {
+                UnloadObject(peer, self.ID.number);
+            }
+        }
+        orig(self, coord);
+    }
+
+    // Load an object if it's relevant to the client
+    private void LoadObject(TrackedPeer peer, PhysicalObject o)
+    {
+        if (peer.RoomStates[o.abstractPhysicalObject.Room.index] == RoomState.Synced) {
+            Introduce(peer, o);
+            Update(peer, o);
+        }
+    }
+
+    // Unload an object if it's relevant to the client
+    private void UnloadObject(TrackedPeer peer, int id)
+    {
+        int i = peer.RealizedObjects.IndexOf(id);
+        if (i >= 0) {
+            peer.RealizedObjects.RemoveAt(i);
+            peer.NetPeer.Send(new DestroyObject(id));
+        }
+    }
+
+    // Unload an entire room for a peer
+    private void UnloadForPeer(TrackedPeer peer, AbstractRoom room)
+    {
+        peer.RoomStates[room.index] = RoomState.Abstract;
+        if (peer.RealizedRooms.Remove(room.index)) {
+            peer.NetPeer.Send(new AbstractizeRoom(room.index));
+        }
+
+        foreach (var entity in room.entities) {
+            if (entity is AbstractPhysicalObject apo && apo.realizedObject != null) {
+                UnloadObject(peer, apo.ID.number);
+            }
+        }
+    }
+
+    // Unload an entire room every peer, and the server
+    private void UnloadForServer(AbstractRoom room)
+    {
+        rooms[room.index].LastVisit = null;
+
+        foreach (var entity in room.entities) {
+            if (entity is AbstractPhysicalObject apo && apo.realizedObject != null) {
+                foreach (var peer in trackedPeers) {
+                    UnloadObject(peer, apo.ID.number);
+                }
+            }
+        }
+
+        foreach (var peer in trackedPeers) {
+            peer.RoomStates[room.index] = RoomState.Abstract;
+            if (peer.RealizedRooms.Remove(room.index)) {
+                peer.NetPeer.Send(new AbstractizeRoom(room.index));
+            }
+        }
+
+        room.Abstractize();
     }
 
     public void Update()
@@ -72,11 +153,9 @@ sealed class ServerRoomLogic
         // Look for new untracked peers
         foreach (var peer in Main.Instance.server.ConnectedPeerList) {
             var player = session.GetPlayer(peer);
-            if (player == null || trackedPeers.Any(p => p.Player.ID == player.ID)) {
-                continue;
+            if (player != null && !trackedPeers.Any(p => p.Player.ID == player.ID)) {
+                trackedPeers.Add(new(player, peer, new RoomState[game.world.abstractRooms.Length]));
             }
-
-            trackedPeers.Add(new(player, peer, new RoomState[game.world.abstractRooms.Length]));
         }
         // Remove old peers that have disconnected
         for (int i = trackedPeers.Count - 1; i >= 0; i--) {
@@ -115,11 +194,65 @@ sealed class ServerRoomLogic
 
     private void Introduce(TrackedPeer peer, Room room)
     {
-        Main.Log.LogDebug($"Introduce {room.abstractRoom.name} to player {peer.Player.ID.number}");
+        foreach (var entity in room.abstractRoom.entities) {
+            if (entity is AbstractPhysicalObject apo && apo.realizedObject != null) {
+                Introduce(peer, apo.realizedObject);
+            }
+        }
+    }
+
+    private void Introduce(TrackedPeer peer, PhysicalObject realizedObject)
+    {
+        peer.RealizedObjects.Add(realizedObject.abstractPhysicalObject.ID.number);
+
+        int id = realizedObject.abstractPhysicalObject.ID.number;
+        if (realizedObject is Player p) {
+            SharedPlayerData data = p.Data() ?? new();
+            IntroPlayer intro = new() {
+                ID = id,
+                SkinR = data.skinColor.r,
+                SkinG = data.skinColor.g,
+                SkinB = data.skinColor.b,
+                RunSpeed = data.stats.runspeedFac,
+                PoleClimbSpeed = data.stats.poleClimbSpeedFac,
+                CorridorClimbSpeed = data.stats.corridorClimbSpeedFac,
+                BodyWeight = data.stats.bodyWeightFac,
+                Lungs = data.stats.lungsFac,
+                Loudness = data.stats.loudnessFac,
+                Stealth = data.stats.visualStealthInSneakMode,
+                VisBonus = data.stats.generalVisibilityBonus,
+                ThrowingSkill = (byte)data.stats.throwingSkill,
+                Ill = data.stats.malnourished,
+            };
+            peer.NetPeer.Send(intro);
+        }
     }
 
     private void Update(TrackedPeer peer, Room room)
     {
-        Main.Log.LogDebug($"Updating {room.abstractRoom.name} for player {peer.Player.ID.number}");
+        foreach (var entity in room.abstractRoom.entities) {
+            if (entity is AbstractPhysicalObject apo && apo.realizedObject != null) {
+                Update(peer, apo.realizedObject);
+            }
+        }
+    }
+
+    private void Update(TrackedPeer peer, PhysicalObject realizedObject)
+    {
+        int id = realizedObject.abstractPhysicalObject.ID.number;
+        if (realizedObject is Player p) {
+            Input input = p.input[0].ToPacket();
+            UpdatePlayer update = new() {
+                ID = id,
+                Room = p.abstractCreature.Room.index,
+                HeadPos = p.firstChunk.pos,
+                HeadVel = p.firstChunk.vel,
+                ButtPos = p.bodyChunks[1].pos,
+                ButtVel = p.bodyChunks[1].vel,
+                InputDir = input.Dir,
+                InputBitmask = input.Bitmask,
+            };
+            peer.NetPeer.Send(update, DeliveryMethod.ReliableSequenced);
+        }
     }
 }

@@ -39,6 +39,25 @@ public static partial class Packets
         return value;
     }
 
+    public static Player.InputPackage ToPackage(this Input input)
+    {
+        Player.InputPackage package = new(false, 0, 0, input.Jump, input.Throw, input.Pickup, input.Pickup, false) {
+            analogueDir = input.Dir
+        };
+        if (input.Dir.x > +0.5f) package.x = +1;
+        if (input.Dir.x < -0.5f) package.x = -1;
+        if (input.Dir.y > +0.5f) package.y = +1;
+        if (input.Dir.y < -0.5f) { package.y = -1; package.downDiagonal = package.x; }
+        return package;
+    }
+
+    public static Input ToPacket(this Player.InputPackage input)
+    {
+        Vector2 dir = input.analogueDir != default ? input.analogueDir : new Vector2(input.x, input.y).normalized;
+
+        return new(dir, Input.ToBitmask(input.jmp, input.thrw, input.pckp, input.mp));
+    }
+
     #region Custom Get/Put methods for LiteNetLib
     public static Vector2 GetVec(this NetDataReader reader) => new(x: reader.GetFloat(), y: reader.GetFloat());
     public static Vector2[] GetVecArray(this NetDataReader reader)
