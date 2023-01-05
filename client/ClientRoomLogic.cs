@@ -2,12 +2,12 @@
 
 namespace Client;
 
-sealed class ClientRoomRealizer
+sealed class ClientRoomLogic
 {
     readonly RainWorldGame game;
     readonly ClientSession session;
 
-    public ClientRoomRealizer(RainWorldGame game, ClientSession session)
+    public ClientRoomLogic(RainWorldGame game, ClientSession session)
     {
         this.game = game;
         this.session = session;
@@ -15,7 +15,7 @@ sealed class ClientRoomRealizer
 
     public void Update()
     {
-        // Follow own player. This isn't really room realizing logic, I just need to put this somewhere. Might consider renaming this class to "ClientRoomLogic".
+        // Follow our own player
         game.cameras[0].followAbstractCreature = session.MyPlayer;
 
         // Read ALL RealizeRoom packets, not just the latest one!!

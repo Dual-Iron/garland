@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Common;
+using System.Collections.Generic;
 
 namespace Client;
 
@@ -13,7 +14,7 @@ sealed class ClientSession : GameSession
 
     public readonly byte SlugcatWorld;
     public readonly int ClientPid;
-    public readonly ClientRoomRealizer RoomRealizer;
+    public readonly ClientRoomLogic RoomRealizer;
 
     readonly Dictionary<int, int> pidToLocalID = new();
     readonly List<SharedPlayerData> clientData = new();

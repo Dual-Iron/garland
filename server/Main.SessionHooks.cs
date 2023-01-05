@@ -78,6 +78,8 @@ partial class Main
         }
         string startingRegion = split[0];
 
+        self.regions = new Region[1] { new Region(startingRegion, firstRoomIndex: 0, regionNumber: 0) };
+
         if (Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", startingRegion)) { }
         else if (split.Length > 2 && Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", split[1]))
             startingRegion = split[1];

@@ -22,7 +22,7 @@ sealed class ServerSession : GameSession
     }
 
     public readonly byte SlugcatWorld;
-    public readonly ServerRoomRealizer RoomRealizer;
+    public readonly ServerRoomLogic RoomRealizer;
 
     // TODO: Save and load serverData, hashToPid, pos, and playerState for each player at the end/start of each session.
     // Fill Players as soon as possible after the session starts.
