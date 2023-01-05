@@ -1,4 +1,6 @@
 ﻿using Common;
+using HUD;
+using System;
 
 namespace Client;
 
@@ -11,18 +13,22 @@ partial class Main
 
     private void GlobalRain_Update(On.GlobalRain.orig_Update orig, GlobalRain self)
     {
-        if (self.deathRain != null)
-            self.floodSpeed = 0.1f;
-
         orig(self);
+
+        if (self.game.session is not ClientSession session) return;
 
         RainCycle rainCycle = self.game.world.rainCycle;
 
         if (SyncRain.Latest(out var syncRain)) {
+            Log.LogDebug(syncRain);
             syncRain.Deconstruct(out var timer, out var cycleLength, out self.rainDirection, out self.rainDirectionGetTo);
 
             rainCycle.timer = timer;
             rainCycle.cycleLength = cycleLength;
+
+            if (self.game.cameras[0].hud?.rainMeter is RainMeter rm && rm.circles.Length != rainCycle.cycleLength / 1200) {
+                FixCircles(rm, session);
+            }
         }
 
         if (SyncDeathRain.Latest(out var deathRain)) {
@@ -47,7 +53,23 @@ partial class Main
             rainCycle.brokenAntiGrav.counter = counter;
         }
     }
-    
+
+    private void FixCircles(RainMeter rm, ClientSession session)
+    {
+        FContainer container = rm.circles[0].sprite.container;
+
+        // Remove old circles
+        foreach (var circle in rm.circles) {
+            circle.sprite.RemoveFromContainer();
+        }
+
+        // Add the new ones :)
+        rm.circles = new HUDCircle[session.game.world.rainCycle.cycleLength / 1200];
+        for (int i = 0; i < rm.circles.Length; i++) {
+            rm.circles[i] = new HUDCircle(rm.hud, HUDCircle.SnapToGraphic.smallEmptyCircle, container, 0);
+        }
+    }
+
     private void CatchUpDeathRain(GlobalRain rain, GlobalRain.DeathRain.DeathRainMode mode)
     {
         // GradeAPlateu, GradeBPlateu, and Mayhem do not have special update logic, and inherit previous stages
