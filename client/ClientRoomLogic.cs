@@ -91,10 +91,11 @@ sealed class ClientRoomLogic
 
     private void UpdateStuff()
     {
+        session.UpdatePlayer.Clear();
         foreach (var packet in UpdatePlayer.All()) {
-            if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Player p) {
-                session.LastInput[packet.ID] = new(packet.InputDir0, packet.InputBitmask0);
-                session.UpdatePlayerCache[packet.ID] = packet;
+            if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Player) {
+                session.PlayerLastInput[packet.ID] = new(packet.InputDir0, packet.InputBitmask0);
+                session.UpdatePlayer[packet.ID] = packet;
             }
         }
     }

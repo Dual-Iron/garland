@@ -17,8 +17,9 @@ sealed class ClientSession : GameSession
     public readonly ClientRoomLogic RoomRealizer;
     public readonly Dictionary<int, PhysicalObject> Objects = new();
     public readonly Dictionary<int, SharedPlayerData> ClientData = new();
-    public readonly Dictionary<int, UpdatePlayer> UpdatePlayerCache = new();
-    public readonly Dictionary<int, Input> LastInput = new();
+
+    public readonly Dictionary<int, Input> PlayerLastInput = new();
+    public readonly Dictionary<int, UpdatePlayer> UpdatePlayer = new();
 
     public override void AddPlayer(AbstractCreature player)
     {

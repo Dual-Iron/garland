@@ -20,7 +20,7 @@ partial class Main
 
         if (self.session is not ClientSession sess) return;
 
-        foreach (var kvp in sess.UpdatePlayerCache) {
+        foreach (var kvp in sess.UpdatePlayer) {
             if (sess.Objects.TryGetValue(kvp.Key, out var obj) && obj is Player p) {
                 var packet = kvp.Value;
 
@@ -34,7 +34,6 @@ partial class Main
                 p.animation = (Player.AnimationIndex)packet.Animation;
             }
         }
-        sess.UpdatePlayerCache.Clear();
     }
 
     private void Player_checkInput(On.Player.orig_checkInput orig, Player self)
@@ -58,7 +57,7 @@ partial class Main
             return;
         }
 
-        if (session.UpdatePlayerCache.TryGetValue(self.Pid(), out var packet)) {
+        if (session.UpdatePlayer.TryGetValue(self.Pid(), out var packet)) {
             self.input[0] = new Input(packet.InputDir0, packet.InputBitmask0).ToPackage();
             self.input[1] = new Input(packet.InputDir1, packet.InputBitmask1).ToPackage();
             self.input[2] = new Input(packet.InputDir2, packet.InputBitmask2).ToPackage();
@@ -71,7 +70,7 @@ partial class Main
             self.input[9] = new Input(packet.InputDir9, packet.InputBitmask9).ToPackage();
         }
         // Or stand still.
-        else if (session.LastInput.TryGetValue(self.Pid(), out var input)) {
+        else if (session.PlayerLastInput.TryGetValue(self.Pid(), out var input)) {
             self.input[0] = input.ToPackage();
         }
     }
