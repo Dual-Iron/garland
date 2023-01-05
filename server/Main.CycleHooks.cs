@@ -9,7 +9,7 @@ partial class Main
 
     void SyncDeathRain(GlobalRain.DeathRain rain)
     {
-        server.Broadcast(new SyncDeathRain((byte)rain.deathRainMode, rain.timeInThisMode, rain.progression, rain.calmBeforeStormSunlight));
+        server.Broadcast(new SyncDeathRain((byte)rain.deathRainMode, rain.timeInThisMode, rain.progression, rain.calmBeforeStormSunlight, rain.globalRain.flood, rain.globalRain.floodSpeed));
     }
 
     private void GameHooks()
@@ -22,8 +22,6 @@ partial class Main
 
     private void GlobalRain_Update(On.GlobalRain.orig_Update orig, GlobalRain self)
     {
-        self.floodSpeed = 0.1f;
-
         float rainDirectionGetToLast = self.rainDirectionGetTo;
 
         orig(self);

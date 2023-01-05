@@ -31,7 +31,7 @@ partial class Main
                 rainCycle.RainHit();
             }
 
-            deathRain.Deconstruct(out var mode, out self.deathRain!.timeInThisMode, out self.deathRain.progression, out self.deathRain.calmBeforeStormSunlight);
+            deathRain.Deconstruct(out var mode, out self.deathRain!.timeInThisMode, out self.deathRain.progression, out self.deathRain.calmBeforeStormSunlight, out self.flood, out self.floodSpeed);
 
             self.deathRain.deathRainMode = (GlobalRain.DeathRain.DeathRainMode)mode;
 

@@ -13,7 +13,7 @@ public enum PacketKind : ushort
     Input = 0x100,
     /// <summary>Sent to clients joining a game session.</summary>
     EnterSession = 0x200,
-    /// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.1 value.</summary>
+    /// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins.</summary>
     SyncRain = 0x201,
     /// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.</summary>
     SyncDeathRain = 0x202,
@@ -135,7 +135,7 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Cli
     }
 }
 
-/// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.1 value.</summary>
+/// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins.</summary>
 public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainDirection, float RainDirectionGetTo) : IPacket
 {
     public static PacketQueue<SyncRain> Queue { get; } = new();
@@ -165,7 +165,7 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
 }
 
 /// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.</summary>
-public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, float Progression, float CalmBeforeSunlight) : IPacket
+public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, float Progression, float CalmBeforeSunlight, float Flood, float FloodSpeed) : IPacket
 {
     public static PacketQueue<SyncDeathRain> Queue { get; } = new();
 
@@ -180,6 +180,8 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
         TimeInThisMode = reader.GetFloat();
         Progression = reader.GetFloat();
         CalmBeforeSunlight = reader.GetFloat();
+        Flood = reader.GetFloat();
+        FloodSpeed = reader.GetFloat();
 
     }
 
@@ -189,6 +191,8 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
         writer.Put(TimeInThisMode);
         writer.Put(Progression);
         writer.Put(CalmBeforeSunlight);
+        writer.Put(Flood);
+        writer.Put(FloodSpeed);
 
     }
 }

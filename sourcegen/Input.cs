@@ -20,7 +20,7 @@ EnterSession = 0x200 {
     str StartingRoom
 }
 
-# Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins. Flood speed is a constant 0.1 value.
+# Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins.
 SyncRain = 0x201 {
     u16 RainTimer
     u16 RainTimerMax
@@ -34,6 +34,8 @@ SyncDeathRain = 0x202 {
     f32 TimeInThisMode
     f32 Progression
     f32 CalmBeforeSunlight
+    f32 Flood
+    f32 FloodSpeed
 }
 
 # Sent after each time AntiGravity toggles on or off. Progress is set to 0 each time the packet is received.
