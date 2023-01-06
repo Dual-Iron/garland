@@ -155,7 +155,7 @@ sealed class ServerRoomLogic
 
     public void Update()
     {
-        rooms ??= new ServerRoom[game.world.abstractRooms.Length];
+        rooms ??= new ServerRoom[game.overWorld.TotalRoomCount()];
 
         UpdatePeerList();
 
@@ -184,7 +184,7 @@ sealed class ServerRoomLogic
         foreach (var peer in Main.Instance.server.ConnectedPeerList) {
             var player = session.GetPlayer(peer);
             if (player != null && !trackedPeers.Any(p => p.Player.ID == player.ID)) {
-                trackedPeers.Add(new(player, peer, new RoomState[game.world.abstractRooms.Length]));
+                trackedPeers.Add(new(player, peer, new RoomState[game.overWorld.TotalRoomCount()]));
             }
         }
         // Remove old peers that have disconnected
@@ -240,26 +240,7 @@ sealed class ServerRoomLogic
         int id = realizedObject.abstractPhysicalObject.ID.number;
         if (realizedObject is Player p) {
             SharedPlayerData data = p.Data() ?? new();
-            IntroPlayer intro = new() {
-                ID = id,
-                Room = p.abstractPhysicalObject.Room.index,
-                SkinR = data.SkinColor.r,
-                SkinG = data.SkinColor.g,
-                SkinB = data.SkinColor.b,
-                RunSpeed = data.Stats.runspeedFac,
-                PoleClimbSpeed = data.Stats.poleClimbSpeedFac,
-                CorridorClimbSpeed = data.Stats.corridorClimbSpeedFac,
-                BodyWeight = data.Stats.bodyWeightFac,
-                Lungs = data.Stats.lungsFac,
-                Loudness = data.Stats.loudnessFac,
-                Stealth = data.Stats.visualStealthInSneakMode,
-                VisBonus = data.Stats.generalVisibilityBonus,
-                ThrowingSkill = (byte)data.Stats.throwingSkill,
-                SleepFood = (byte)data.Stats.foodToHibernate,
-                MaxFood = (byte)data.Stats.maxFood,
-                Bitmask = IntroPlayer.ToBitmask(data.Stats.malnourished, data.EatsMeat, data.Glows, data.HasMark),
-            };
-            peer.NetPeer.Send(intro);
+            peer.NetPeer.Send(data.ToPacket(id, p.abstractCreature.pos.room));
         }
     }
 }

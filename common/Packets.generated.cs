@@ -23,13 +23,13 @@ public enum PacketKind : ushort
     RealizeRoom = 0x204,
     /// <summary>Tells a client to abtractize a room if it hasn't already. TODO (low-priority)</summary>
     AbstractizeRoom = 0x205,
-    /// <summary>Tells a client to destroy an object if it exists. TODO</summary>
+    /// <summary>Tells a client to destroy an object if it exists.</summary>
     DestroyObject = 0x206,
     /// <summary>Kills a creature for a client.</summary>
     KillCreature = 0x207,
     /// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
     SyncShortcut = 0x208,
-    /// <summary>Introduces a player to the client. TODO (next)</summary>
+    /// <summary>Introduces a player to the client.</summary>
     IntroPlayer = 0x210,
     /// <summary>Updates a player for a client.</summary>
     UpdatePlayer = 0x211,
@@ -272,7 +272,7 @@ public record struct AbstractizeRoom(int Index) : IPacket
     }
 }
 
-/// <summary>Tells a client to destroy an object if it exists. TODO</summary>
+/// <summary>Tells a client to destroy an object if it exists.</summary>
 public record struct DestroyObject(int ID) : IPacket
 {
     public static PacketQueue<DestroyObject> Queue { get; } = new();
@@ -349,8 +349,8 @@ public record struct SyncShortcut(int CreatureID, int Room, int EntranceNode, in
     }
 }
 
-/// <summary>Introduces a player to the client. TODO (next)</summary>
-public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte SkinB, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float BodyWeight, float Lungs, float Loudness, float VisBonus, float Stealth, byte ThrowingSkill, byte SleepFood, byte MaxFood, byte Bitmask) : IPacket
+/// <summary>Introduces a player to the client.</summary>
+public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte SkinB, byte FoodMax, byte FoodSleep, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float Weight, float VisBonus, float SneakStealth, float Loudness, float LungWeakness, byte Bitmask) : IPacket
 {
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
 
@@ -366,17 +366,16 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
         SkinR = reader.GetByte();
         SkinG = reader.GetByte();
         SkinB = reader.GetByte();
+        FoodMax = reader.GetByte();
+        FoodSleep = reader.GetByte();
         RunSpeed = reader.GetFloat();
         PoleClimbSpeed = reader.GetFloat();
         CorridorClimbSpeed = reader.GetFloat();
-        BodyWeight = reader.GetFloat();
-        Lungs = reader.GetFloat();
-        Loudness = reader.GetFloat();
+        Weight = reader.GetFloat();
         VisBonus = reader.GetFloat();
-        Stealth = reader.GetFloat();
-        ThrowingSkill = reader.GetByte();
-        SleepFood = reader.GetByte();
-        MaxFood = reader.GetByte();
+        SneakStealth = reader.GetFloat();
+        Loudness = reader.GetFloat();
+        LungWeakness = reader.GetFloat();
         Bitmask = reader.GetByte();
 
     }
@@ -388,17 +387,16 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
         writer.Put(SkinR);
         writer.Put(SkinG);
         writer.Put(SkinB);
+        writer.Put(FoodMax);
+        writer.Put(FoodSleep);
         writer.Put(RunSpeed);
         writer.Put(PoleClimbSpeed);
         writer.Put(CorridorClimbSpeed);
-        writer.Put(BodyWeight);
-        writer.Put(Lungs);
-        writer.Put(Loudness);
+        writer.Put(Weight);
         writer.Put(VisBonus);
-        writer.Put(Stealth);
-        writer.Put(ThrowingSkill);
-        writer.Put(SleepFood);
-        writer.Put(MaxFood);
+        writer.Put(SneakStealth);
+        writer.Put(Loudness);
+        writer.Put(LungWeakness);
         writer.Put(Bitmask);
 
     }

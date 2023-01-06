@@ -57,26 +57,7 @@ sealed class ClientRoomLogic
     {
         foreach (var packet in IntroPlayer.All()) {
             // Set this before realizing player (so slugcatStats is not null)
-            session.ClientData[packet.ID] = new SharedPlayerData() {
-                SkinColor = new UnityEngine.Color32(packet.SkinR, packet.SkinG, packet.SkinB, 255),
-                EatsMeat = packet.EatsMeat,
-                HasMark = packet.HasMark, // TODO HasMark and other graphical/non-graphical changes
-                Glows = packet.Glows,
-                Stats = new SlugcatStats(0, false) {
-                    runspeedFac = packet.RunSpeed,
-                    poleClimbSpeedFac = packet.PoleClimbSpeed,
-                    corridorClimbSpeedFac = packet.CorridorClimbSpeed,
-                    bodyWeightFac = packet.BodyWeight,
-                    lungsFac = packet.Lungs,
-                    loudnessFac = packet.Loudness,
-                    visualStealthInSneakMode = packet.Stealth,
-                    generalVisibilityBonus = packet.VisBonus,
-                    throwingSkill = packet.ThrowingSkill,
-                    foodToHibernate = packet.SleepFood,
-                    maxFood = packet.MaxFood,
-                    malnourished = packet.Ill,
-                }
-            };
+            session.ClientData[packet.ID] = SharedPlayerData.FromPacket(packet);
 
             AbstractCreature p = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, new(packet.Room, 0, 0, -1), new(-1, packet.ID));
             p.state = new PlayerState(p, playerNumber: packet.ID, slugcatCharacter: packet.ID, false);

@@ -56,7 +56,7 @@ AbstractizeRoom = 0x205 {
     i32 Index
 }
 
-# Tells a client to destroy an object if it exists. TODO
+# Tells a client to destroy an object if it exists.
 DestroyObject = 0x206 {
     i32 ID
 }
@@ -75,24 +75,23 @@ SyncShortcut = 0x208 {
     ivec[] Positions
 }
 
-# Introduces a player to the client. TODO (next)
+# Introduces a player to the client.
 IntroPlayer = 0x210 {
     i32  ID
     i32  Room
     u8   SkinR
     u8   SkinG
     u8   SkinB
+    u8   FoodMax
+    u8   FoodSleep
     f32  RunSpeed
     f32  PoleClimbSpeed
     f32  CorridorClimbSpeed
-    f32  BodyWeight
-    f32  Lungs
-    f32  Loudness
+    f32  Weight
     f32  VisBonus
-    f32  Stealth
-    u8   ThrowingSkill
-    u8   SleepFood
-    u8   MaxFood
+    f32  SneakStealth
+    f32  Loudness
+    f32  LungWeakness
     u8   Bitmask { Ill = 0x1, EatsMeat = 0x2, Glows = 0x4, HasMark = 0x8 }
 }
 

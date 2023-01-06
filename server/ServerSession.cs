@@ -6,12 +6,22 @@ using System.Linq;
 using UnityEngine;
 using Rng = UnityEngine.Random;
 using static UnityEngine.Mathf;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Server;
 
 sealed class ServerSession : GameSession
 {
-    record struct PeerData(string Hash, int Pid);
+    record struct PeerData(string Name, int Pid);
+
+    private static string GetHash(string name, string password)
+    {
+        string injectiveCombination = $"{name.Length}{name}{password.Length}{password}";
+        byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(injectiveCombination));
+        string hash = Convert.ToBase64String(hashBytes);
+        return hash;
+    }
 
     public ServerSession(byte slugcatWorld, RainWorldGame game) : base(game)
     {
@@ -22,22 +32,9 @@ sealed class ServerSession : GameSession
     public readonly byte SlugcatWorld;
     public readonly ServerRoomLogic RoomRealizer;
     public readonly List<Common.Input> LastInput = new();
-
-    // TODO: Save and load hashToPid, serverData, pos, and playerState for each player at the end/start of each session.
-    // Players that don't connect for the entire cycle just don't lose any hunger and stay put.
-
-    // Each player has one Player ID (PID).
-    // They start at 0 and increase from there, so they can be accessed in a list.
-    // All players in this list are represented as abstract creatures. Even disconnected players are present, but unconscious. Disconnected players might not realize rooms, though.
-    // Saved to disk.
-    readonly List<SharedPlayerData> serverData = new();
-
-    // TODO: A player's hash will be given by SHA256(username, password).
-    // Saved to disk.
-    readonly Dictionary<string, int> hashToPid = new();
+    public readonly ServerSaveState Save = new();
 
     // Decided whenever a peer logs in.
-    // Ephemeral.
     readonly Dictionary<int, PeerData> peers = new();
 
     private SharedPlayerData CreateNewPlayerData(string hash, int pid)
@@ -51,71 +48,57 @@ sealed class ServerSession : GameSession
 
         Color color = RXColor.ColorFromHSL(hue, saturation, luminosity);
 
-        SlugcatStats stats = new(slugcatNumber: 0, malnourished: false);
-
         float fat = Lerp(-0.1f, 0.15f, Rng.value);
         float speed = Lerp(-0.05f, 0.1f, Rng.value);
         float sneakiness = Lerp(-0.15f, 0.15f, Rng.value);
 
-        stats.runspeedFac += speed - fat * 0.5f;
-        stats.poleClimbSpeedFac += speed * 1.5f - fat * 0.5f;
-        stats.corridorClimbSpeedFac += speed - fat * 0.5f;
-        stats.generalVisibilityBonus -= sneakiness;
-        stats.visualStealthInSneakMode += sneakiness;
-        stats.loudnessFac += fat * 2 - sneakiness;
-        stats.lungsFac += Lerp(-0.2f, 0.1f, Rng.value - speed);
-        stats.bodyWeightFac += fat;
-
-        stats.foodToHibernate += (int)(speed * 30 + fat * 5);
-        stats.maxFood += (int)(fat * 30);
-
-        if (stats.maxFood < stats.foodToHibernate + 1)
-            stats.maxFood = stats.foodToHibernate + 1;
-
-        static string Offset(float value) => value < 0 ? $"- {-value:F2}" : $"+ {value:F2}";
-
-        Main.Log.LogDebug($"""
-            Generated stats for player {pid}: fat {fat:P0}, speed {speed:P0}, sneakiness {sneakiness:P0}
-            run speed    {stats.runspeedFac,6:P0}
-            pole speed   {stats.poleClimbSpeedFac,6:P0}
-            tunnel speed {stats.corridorClimbSpeedFac,6:P0}
-            loudness     {stats.loudnessFac,6:P0}
-            lungs        {stats.lungsFac,6:P0}
-            weight       {stats.bodyWeightFac,6:P0}
-            vis bonus    {Offset(stats.generalVisibilityBonus),6}
-            stealth      {Offset(stats.visualStealthInSneakMode - 0.5f),6}
-            """);
-
         Rng.seed = seed;
-        return new() {
-            Stats = stats,
+
+        int foodSleep = 4 + (int)(speed * 30 + fat * 5);
+        int foodMax = Max(7 + (int)(fat * 30), foodSleep + 1);
+
+        Main.Log.LogDebug($"Generated stats for player {pid}: fat {fat:P0}, speed {speed:P0}, sneakiness {sneakiness:P0}");
+
+        return new SharedPlayerData() {
             SkinColor = color,
-            EatsMeat = stats.foodToHibernate > 6,
+
+            FoodMax = (byte)foodMax,
+            FoodSleep = (byte)foodSleep,
+            RunSpeed = 1 + speed - fat * 0.5f,
+            PoleClimbSpeed = 1 + speed * 1.5f - fat * 0.5f,
+            CorridorClimbSpeed = 1 + speed - fat * 0.5f,
+            Weight = 1 + fat,
+            VisBonus = speed - sneakiness,
+            SneakStealth = 0.5f + sneakiness,
+            Loudness = 1 + fat * 2 - sneakiness,
+            LungWeakness = 1 - speed * 2,
+            Ill = false,
+
+            EatsMeat = foodSleep > 6,
             Glows = false,
             HasMark = false,
         };
     }
 
-    private WorldCoordinate CreateNewPlayerPos(string hash, int pid)
+    private WorldCoordinate CreateNewPlayerPos()
     {
         return new(game.world.GetAbstractRoom(ServerConfig.StartingRoom).index, 5, 5, -1);
     }
 
     /// <summary>Fetches a player from their hash, or creates a new player if they don't exist.</summary>
-    private AbstractCreature GetOrCreatePlayer(string hash)
+    private AbstractCreature GetOrCreatePlayer(string name, string password)
     {
         // Create player's PID if it doesn't exist
-        if (!hashToPid.TryGetValue(hash, out int pid)) {
-            hashToPid[hash] = pid = serverData.Count;
+        if (!Save.nameToPid.TryGetValue(name, out int pid)) {
+            string hash = GetHash(name, password);
 
-            serverData.Add(CreateNewPlayerData(hash, pid));
+            Save.nameToPid[name] = pid = Save.playerData.Count;
+            Save.playerData.Add(new(CreateNewPlayerData(hash, pid), hash));
             LastInput.Add(default);
-
-            // TODO: then save immediately
 
             // Create new abstract player and add it
             EntityID id = new(-1, pid); // TODO: other objects' IDs start at 1000, so this is a safe bet.. for now. Make IDs start at 100,000 later.
-            AbstractCreature player = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, CreateNewPlayerPos(hash, pid), id);
+            AbstractCreature player = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, CreateNewPlayerPos(), id);
             player.state = new PlayerState(player, pid, 0, false);
 
             base.AddPlayer(player);
@@ -125,16 +108,22 @@ sealed class ServerSession : GameSession
     }
 
     /// <summary>Returns true if any connected peers are already associated with the given player hash.</summary>
-    public bool AnyPeerConnectedTo(string hash) => peers.Values.Any(v => v.Hash == hash);
+    public bool AnyPeerConnected(string name) => peers.Values.Any(v => v.Name == name);
+
+    /// <summary>Returns true if the password for a given username matches.</summary>
+    public bool OkPassword(string name, string password)
+    {
+        return !Save.nameToPid.TryGetValue(name, out int pid) || Save.playerData[pid].Hash == GetHash(name, password);
+    }
 
     /// <summary>Called when a peer joins the game and needs a new AbstractCreature to represent them.</summary>
-    public AbstractCreature Join(NetPeer peer, string hash)
+    public AbstractCreature Join(NetPeer peer, string name, string password)
     {
-        var crit = GetOrCreatePlayer(hash);
+        var crit = GetOrCreatePlayer(name, password);
 
         // If this peer is new, add em.
-        if (!peers.TryGetValue(peer.Id, out var peerData) || peerData.Hash != hash) {
-            peers[peer.Id] = new PeerData(hash, hashToPid[hash]);
+        if (!peers.TryGetValue(peer.Id, out var peerData) || peerData.Name != name) {
+            peers[peer.Id] = new PeerData(name, Save.nameToPid[name]);
         }
 
         return crit;
@@ -160,10 +149,10 @@ sealed class ServerSession : GameSession
         }
     }
 
-    public SharedPlayerData? GetPlayerData(int pid) => pid >= 0 && pid < serverData.Count ? serverData[pid] : null;
+    public SharedPlayerData? GetPlayerData(int pid) => pid >= 0 && pid < Save.playerData.Count ? Save.playerData[pid].Shared : null;
     public SharedPlayerData? GetPlayerData(EntityID eid) => GetPlayerData(eid.number);
     public SharedPlayerData? GetPlayerData(AbstractCreature player) => GetPlayerData(player.ID.number);
-    public SharedPlayerData? GetPlayerData(NetPeer peer) => peers.TryGetValue(peer.Id, out PeerData data) ? serverData[data.Pid] : null;
+    public SharedPlayerData? GetPlayerData(NetPeer peer) => peers.TryGetValue(peer.Id, out PeerData data) ? Save.playerData[data.Pid].Shared : null;
 
     public AbstractCreature? GetPlayer(NetPeer peer) => peers.TryGetValue(peer.Id, out PeerData data) ? Players[data.Pid] : null;
 }

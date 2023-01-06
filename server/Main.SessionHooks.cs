@@ -38,7 +38,7 @@ partial class Main
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
-    private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats?> getSlugcatStats = (orig, self) => self.Data()?.Stats;
+    private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => self.Data()?.Stats() ?? orig(self);
 
     private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
 
@@ -77,8 +77,6 @@ partial class Main
             throw new InvalidOperationException($"Starting room is invalid: {startingRoom}");
         }
         string startingRegion = split[0];
-
-        self.regions = new Region[1] { new Region(startingRegion, firstRoomIndex: 0, regionNumber: 0) };
 
         if (Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", startingRegion)) { }
         else if (split.Length > 2 && Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", split[1]))

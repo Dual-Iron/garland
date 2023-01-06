@@ -23,6 +23,12 @@ public static class Utils
         return o is AbstractCreature creature ? $"{creature.creatureTemplate.type}#{o.ID.number}" : $"{o.type}#{o.ID.number}";
     }
 
+    public static int TotalRoomCount(this OverWorld overworld)
+    {
+        Region region = overworld.regions[overworld.regions.Length - 1];
+        return region.firstRoomIndex + region.numberOfRooms;
+}
+
     public static RainWorldGame Game(this PhysicalObject o) => o.abstractPhysicalObject.world.game;
 
     public static PlayerState PlayerState(this AbstractCreature creature)

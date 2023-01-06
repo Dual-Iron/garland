@@ -53,14 +53,14 @@ partial class Main
             Log.LogDebug($"Connected to {peer.EndPoint} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
             if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
-                string hash = peer.EndPoint.ToString();
+                string name = peer.EndPoint.ToString();
 
-                if (session.AnyPeerConnectedTo(hash)) {
+                if (session.AnyPeerConnected(name)) {
                     peer.Disconnect(NetDataWriter.FromString("Another client has already joined with that login."));
                     return;
                 }
 
-                var player = session.Join(peer, hash);
+                var player = session.Join(peer, name, "1234");
                 if (player.realizedObject == null) {
                     player.Room.AddEntity(player);
                     player.RealizeInRoom();
