@@ -12,6 +12,9 @@ using System.Text;
 namespace Server;
 
 // TODO: Make this derive from StoryGameSession. Same for client. Will save me a LOT of headache.
+// Analyze for StoryGameSession and IsStoryGameSession - ex LizardAI::GiftReceived and various creature relationships are weird
+// Maybe look into an optional gossip-based reputation system instead of community relationships
+// Also, add a configurable chance for lineages to loop around
 sealed class ServerSession : GameSession
 {
     record struct PeerData(string Name, int Pid);
