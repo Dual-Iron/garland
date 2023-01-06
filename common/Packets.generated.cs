@@ -29,10 +29,22 @@ public enum PacketKind : ushort
     KillCreature = 0x207,
     /// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
     SyncShortcut = 0x208,
-    /// <summary>Introduces a player to the client.</summary>
-    IntroPlayer = 0x210,
-    /// <summary>Updates a player for a client.</summary>
-    UpdatePlayer = 0x211,
+    /// <summary>Makes a creature grab an object.</summary>
+    Grab = 0x209,
+    /// <summary>Makes a creature throw an object. Object-specific code may be run as needed. For instance, spears thrown by players set spearDamageBonus, and weapons call ChangeMode.</summary>
+    ThrowObject = 0x20A,
+    /// <summary>Makes a weapon hit an object, as in Weapon::HitSomething.</summary>
+    HitObject = 0x20B,
+    /// <summary>Makes a weapon hit a wall, as in Weapon::HitWall(). Makes spears stick in walls if Stick = true.</summary>
+    HitWall = 0x20C,
+    /// <summary>Syncs an object's rotation. Used after Weapon::SetRandomSpin() is called.</summary>
+    SyncRotation = 0x20D,
+    /// <summary>Syncs and object's position.</summary>
+    SyncPosition = 0x20E,
+    /// <summary>Introduces a player to a client.</summary>
+    IntroPlayer = 0x250,
+    /// <summary>Updates a plyaer for a client.</summary>
+    UpdatePlayer = 0x251,
 
 }
 
@@ -54,8 +66,14 @@ public static partial class Packets
                 case 0x206: DestroyObject.Queue.Enqueue(sender, data.Read<DestroyObject>()); break;
                 case 0x207: KillCreature.Queue.Enqueue(sender, data.Read<KillCreature>()); break;
                 case 0x208: SyncShortcut.Queue.Enqueue(sender, data.Read<SyncShortcut>()); break;
-                case 0x210: IntroPlayer.Queue.Enqueue(sender, data.Read<IntroPlayer>()); break;
-                case 0x211: UpdatePlayer.Queue.Enqueue(sender, data.Read<UpdatePlayer>()); break;
+                case 0x209: Grab.Queue.Enqueue(sender, data.Read<Grab>()); break;
+                case 0x20A: ThrowObject.Queue.Enqueue(sender, data.Read<ThrowObject>()); break;
+                case 0x20B: HitObject.Queue.Enqueue(sender, data.Read<HitObject>()); break;
+                case 0x20C: HitWall.Queue.Enqueue(sender, data.Read<HitWall>()); break;
+                case 0x20D: SyncRotation.Queue.Enqueue(sender, data.Read<SyncRotation>()); break;
+                case 0x20E: SyncPosition.Queue.Enqueue(sender, data.Read<SyncPosition>()); break;
+                case 0x250: IntroPlayer.Queue.Enqueue(sender, data.Read<IntroPlayer>()); break;
+                case 0x251: UpdatePlayer.Queue.Enqueue(sender, data.Read<UpdatePlayer>()); break;
 
                 default: error($"Invalid packet type: 0x{type:X}"); break;
             }
@@ -349,7 +367,206 @@ public record struct SyncShortcut(int CreatureID, int Room, int EntranceNode, in
     }
 }
 
-/// <summary>Introduces a player to the client.</summary>
+/// <summary>Makes a creature grab an object.</summary>
+public record struct Grab(int GrabbedID, int GrabbedChunk, int GrabberID, int GraspUsed, float Dominance, byte Bitmask) : IPacket
+{
+    public static PacketQueue<Grab> Queue { get; } = new();
+
+    public static bool Latest(out Grab packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<Grab> All() => Queue.Drain();
+
+    public PacketKind GetKind() => PacketKind.Grab;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        GrabbedID = reader.GetInt();
+        GrabbedChunk = reader.GetInt();
+        GrabberID = reader.GetInt();
+        GraspUsed = reader.GetInt();
+        Dominance = reader.GetFloat();
+        Bitmask = reader.GetByte();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(GrabbedID);
+        writer.Put(GrabbedChunk);
+        writer.Put(GrabberID);
+        writer.Put(GraspUsed);
+        writer.Put(Dominance);
+        writer.Put(Bitmask);
+
+    }
+
+    public static byte ToBitmask(bool NonExclusive, bool ShareWithNonExclusive, bool OverrideEquallyDominant, bool Pacifying)
+    {
+        return (byte)((NonExclusive ? 0x1 : 0) | (ShareWithNonExclusive ? 0x2 : 0) | (OverrideEquallyDominant ? 0x4 : 0) | (Pacifying ? 0x8 : 0));
+    }
+
+    public bool NonExclusive => (Bitmask & 0x1) != 0;
+    public bool ShareWithNonExclusive => (Bitmask & 0x2) != 0;
+    public bool OverrideEquallyDominant => (Bitmask & 0x4) != 0;
+    public bool Pacifying => (Bitmask & 0x8) != 0;
+
+}
+
+/// <summary>Makes a creature throw an object. Object-specific code may be run as needed. For instance, spears thrown by players set spearDamageBonus, and weapons call ChangeMode.</summary>
+public record struct ThrowObject(int ID, int Thrower, int ThrowerGrasp, Vector2 Pos, Vector2 Vel) : IPacket
+{
+    public static PacketQueue<ThrowObject> Queue { get; } = new();
+
+    public static bool Latest(out ThrowObject packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<ThrowObject> All() => Queue.Drain();
+
+    public PacketKind GetKind() => PacketKind.ThrowObject;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+        Thrower = reader.GetInt();
+        ThrowerGrasp = reader.GetInt();
+        Pos = reader.GetVec();
+        Vel = reader.GetVec();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
+        writer.Put(Thrower);
+        writer.Put(ThrowerGrasp);
+        writer.Put(Pos);
+        writer.Put(Vel);
+
+    }
+}
+
+/// <summary>Makes a weapon hit an object, as in Weapon::HitSomething.</summary>
+public record struct HitObject(int ProjectileID, Vector2 ProjectilePos, Vector2 ProjectileVel, int ObjectID, byte Chunk, byte Appendage, byte AppendageSeg, float AppendageSegDistance, Vector2 CollisionPos) : IPacket
+{
+    public static PacketQueue<HitObject> Queue { get; } = new();
+
+    public static bool Latest(out HitObject packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<HitObject> All() => Queue.Drain();
+
+    public PacketKind GetKind() => PacketKind.HitObject;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ProjectileID = reader.GetInt();
+        ProjectilePos = reader.GetVec();
+        ProjectileVel = reader.GetVec();
+        ObjectID = reader.GetInt();
+        Chunk = reader.GetByte();
+        Appendage = reader.GetByte();
+        AppendageSeg = reader.GetByte();
+        AppendageSegDistance = reader.GetFloat();
+        CollisionPos = reader.GetVec();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ProjectileID);
+        writer.Put(ProjectilePos);
+        writer.Put(ProjectileVel);
+        writer.Put(ObjectID);
+        writer.Put(Chunk);
+        writer.Put(Appendage);
+        writer.Put(AppendageSeg);
+        writer.Put(AppendageSegDistance);
+        writer.Put(CollisionPos);
+
+    }
+}
+
+/// <summary>Makes a weapon hit a wall, as in Weapon::HitWall(). Makes spears stick in walls if Stick = true.</summary>
+public record struct HitWall(int ProjectileID, Vector2 ProjectilePos, Vector2 ProjectileVel, bool Stick) : IPacket
+{
+    public static PacketQueue<HitWall> Queue { get; } = new();
+
+    public static bool Latest(out HitWall packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<HitWall> All() => Queue.Drain();
+
+    public PacketKind GetKind() => PacketKind.HitWall;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ProjectileID = reader.GetInt();
+        ProjectilePos = reader.GetVec();
+        ProjectileVel = reader.GetVec();
+        Stick = reader.GetBool();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ProjectileID);
+        writer.Put(ProjectilePos);
+        writer.Put(ProjectileVel);
+        writer.Put(Stick);
+
+    }
+}
+
+/// <summary>Syncs an object's rotation. Used after Weapon::SetRandomSpin() is called.</summary>
+public record struct SyncRotation(int ID, float Rot, float RotSpeed) : IPacket
+{
+    public static PacketQueue<SyncRotation> Queue { get; } = new();
+
+    public static bool Latest(out SyncRotation packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<SyncRotation> All() => Queue.Drain();
+
+    public PacketKind GetKind() => PacketKind.SyncRotation;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+        Rot = reader.GetFloat();
+        RotSpeed = reader.GetFloat();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
+        writer.Put(Rot);
+        writer.Put(RotSpeed);
+
+    }
+}
+
+/// <summary>Syncs and object's position.</summary>
+public record struct SyncPosition(int ID, byte Chunk, Vector2 Pos, Vector2 PosLast) : IPacket
+{
+    public static PacketQueue<SyncPosition> Queue { get; } = new();
+
+    public static bool Latest(out SyncPosition packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<SyncPosition> All() => Queue.Drain();
+
+    public PacketKind GetKind() => PacketKind.SyncPosition;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+        Chunk = reader.GetByte();
+        Pos = reader.GetVec();
+        PosLast = reader.GetVec();
+
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
+        writer.Put(Chunk);
+        writer.Put(Pos);
+        writer.Put(PosLast);
+
+    }
+}
+
+/// <summary>Introduces a player to a client.</summary>
 public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte SkinB, byte FoodMax, byte FoodSleep, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float Weight, float VisBonus, float SneakStealth, float Loudness, float LungWeakness, byte Bitmask) : IPacket
 {
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
@@ -413,7 +630,7 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
 
 }
 
-/// <summary>Updates a player for a client.</summary>
+/// <summary>Updates a plyaer for a client.</summary>
 public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Animation, byte AnimationFrame, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir0, Vector2 InputDir1, Vector2 InputDir2, Vector2 InputDir3, Vector2 InputDir4, Vector2 InputDir5, Vector2 InputDir6, Vector2 InputDir7, Vector2 InputDir8, Vector2 InputDir9, byte InputBitmask0, byte InputBitmask1, byte InputBitmask2, byte InputBitmask3, byte InputBitmask4, byte InputBitmask5, byte InputBitmask6, byte InputBitmask7, byte InputBitmask8, byte InputBitmask9) : IPacket
 {
     public static PacketQueue<UpdatePlayer> Queue { get; } = new();

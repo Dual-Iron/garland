@@ -75,8 +75,63 @@ SyncShortcut = 0x208 {
     ivec[] Positions
 }
 
-# Introduces a player to the client.
-IntroPlayer = 0x210 {
+# Makes a creature grab an object.
+Grab = 0x209 {
+    i32 GrabbedID
+    i32 GrabbedChunk
+    i32 GrabberID
+    i32 GraspUsed
+    f32 Dominance
+    u8  Bitmask { NonExclusive = 0x1, ShareWithNonExclusive = 0x2, OverrideEquallyDominant = 0x4, Pacifying = 0x8 }
+}
+
+# Makes a creature throw an object. Object-specific code may be run as needed. For instance, spears thrown by players set spearDamageBonus, and weapons call ChangeMode.
+ThrowObject = 0x20A {
+    i32 ID
+    i32 Thrower
+    i32 ThrowerGrasp
+    vec Pos
+    vec Vel
+}
+
+# Makes a weapon hit an object, as in Weapon::HitSomething.
+HitObject = 0x20B {
+    i32 ProjectileID
+    vec ProjectilePos
+    vec ProjectileVel
+    i32 ObjectID
+    u8  Chunk
+    u8  Appendage
+    u8  AppendageSeg
+    f32 AppendageSegDistance
+    vec CollisionPos
+}
+
+# Makes a weapon hit a wall, as in Weapon::HitWall(). Makes spears stick in walls if Stick = true.
+HitWall = 0x20C {
+    i32  ProjectileID
+    vec  ProjectilePos
+    vec  ProjectileVel
+    bool Stick
+}
+
+# Syncs an object's rotation. Used after Weapon::SetRandomSpin() is called.
+SyncRotation = 0x20D {
+    i32 ID
+    f32 Rot
+    f32 RotSpeed
+}
+
+# Syncs and object's position.
+SyncPosition = 0x20E {
+    i32 ID
+    u8  Chunk
+    vec Pos
+    vec PosLast
+}
+
+# Introduces a player to a client.
+IntroPlayer = 0x250 {
     i32  ID
     i32  Room
     u8   SkinR
@@ -95,8 +150,8 @@ IntroPlayer = 0x210 {
     u8   Bitmask { Ill = 0x1, EatsMeat = 0x2, Glows = 0x4, HasMark = 0x8 }
 }
 
-# Updates a player for a client.
-UpdatePlayer = 0x211 {
+# Updates a plyaer for a client.
+UpdatePlayer = 0x251 {
     i32 ID
     bool Standing
     u8  BodyMode

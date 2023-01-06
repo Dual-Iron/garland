@@ -264,7 +264,7 @@ struct PacketField
         "vec[]" => "Vector2[]",
         "ivec" => "IntVector2",
         "ivec[]" => "IntVector2[]",
-        _ => throw new ArgumentException()
+        _ => throw new ArgumentException($"What is {Type}")
     };
 
     public string DeserializeCall() => Type switch {
@@ -280,7 +280,7 @@ struct PacketField
         "vec[]" => "GetVecArray()",
         "ivec" => "GetIVec()",
         "ivec[]" => "GetIVecArray()",
-        _ => throw new ArgumentException()
+        _ => throw new ArgumentException($"What is {Type}")
     };
 }
 
