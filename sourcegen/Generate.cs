@@ -182,7 +182,7 @@ void WritePacketKind(PacketKind packet)
         if (fields[i].BitmaskStart == fields[i].BitmaskEnd) continue;
 
         // Generate ToBitmask methods
-        bitmaskMethods.Append($"\r\n\r\n    public static {fields[i].TypeCsharp()} To{fields[i].Name}(");
+        bitmaskMethods.Append($"\r\n    public static {fields[i].TypeCsharp()} To{fields[i].Name}(");
         for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
             bitmaskMethods.Append($"bool {bitmasks[j].Name}");
             if (j < fields[i].BitmaskEnd - 1) {
@@ -197,7 +197,6 @@ void WritePacketKind(PacketKind packet)
             }
         }
         bitmaskMethods.AppendLine(");\r\n    }");
-        bitmaskMethods.AppendLine();
 
         // Generate helper properties
         for (int j = fields[i].BitmaskStart; j < fields[i].BitmaskEnd; j++) {
@@ -213,23 +212,18 @@ void WritePacketKind(PacketKind packet)
 public record struct {{packet.Name}}({{parameters}}) : IPacket
 {
     public static PacketQueue<{{packet.Name}}> Queue { get; } = new();
-
     public static bool Latest(out {{packet.Name}} packet) => Queue.Latest(out _, out packet);
     public static IEnumerable<{{packet.Name}}> All() => Queue.Drain();
-
     public PacketKind GetKind() => PacketKind.{{packet.Name}};
-
     public void Deserialize(NetDataReader reader)
     {
 {{deserializeContents}}
     }
-
     public void Serialize(NetDataWriter writer)
     {
 {{serializeContents}}
     }{{bitmaskMethods}}
 }
-
 """);
 }
 #endregion
