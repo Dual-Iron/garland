@@ -101,6 +101,7 @@ UpdatePlayer = 0x211 {
     bool Standing
     u8  BodyMode
     u8  Animation
+    u8  AnimationFrame
     vec HeadPos
     vec HeadVel
     vec ButtPos

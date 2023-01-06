@@ -63,6 +63,7 @@ partial class Main
             Standing = p.standing,
             BodyMode = (byte)p.bodyMode,
             Animation = (byte)p.animation,
+            AnimationFrame = (byte)p.animationFrame,
             HeadPos = p.firstChunk.pos,
             HeadVel = p.firstChunk.vel,
             ButtPos = p.bodyChunks[1].pos,

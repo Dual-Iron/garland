@@ -414,7 +414,7 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
 }
 
 /// <summary>Updates a player for a client.</summary>
-public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Animation, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir0, Vector2 InputDir1, Vector2 InputDir2, Vector2 InputDir3, Vector2 InputDir4, Vector2 InputDir5, Vector2 InputDir6, Vector2 InputDir7, Vector2 InputDir8, Vector2 InputDir9, byte InputBitmask0, byte InputBitmask1, byte InputBitmask2, byte InputBitmask3, byte InputBitmask4, byte InputBitmask5, byte InputBitmask6, byte InputBitmask7, byte InputBitmask8, byte InputBitmask9) : IPacket
+public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Animation, byte AnimationFrame, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir0, Vector2 InputDir1, Vector2 InputDir2, Vector2 InputDir3, Vector2 InputDir4, Vector2 InputDir5, Vector2 InputDir6, Vector2 InputDir7, Vector2 InputDir8, Vector2 InputDir9, byte InputBitmask0, byte InputBitmask1, byte InputBitmask2, byte InputBitmask3, byte InputBitmask4, byte InputBitmask5, byte InputBitmask6, byte InputBitmask7, byte InputBitmask8, byte InputBitmask9) : IPacket
 {
     public static PacketQueue<UpdatePlayer> Queue { get; } = new();
 
@@ -429,6 +429,7 @@ public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Ani
         Standing = reader.GetBool();
         BodyMode = reader.GetByte();
         Animation = reader.GetByte();
+        AnimationFrame = reader.GetByte();
         HeadPos = reader.GetVec();
         HeadVel = reader.GetVec();
         ButtPos = reader.GetVec();
@@ -462,6 +463,7 @@ public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Ani
         writer.Put(Standing);
         writer.Put(BodyMode);
         writer.Put(Animation);
+        writer.Put(AnimationFrame);
         writer.Put(HeadPos);
         writer.Put(HeadVel);
         writer.Put(ButtPos);

@@ -41,6 +41,7 @@ partial class Main
                 p.standing = packet.Standing;
                 p.bodyMode = (Player.BodyModeIndex)packet.BodyMode;
                 p.animation = (Player.AnimationIndex)packet.Animation;
+                p.animationFrame = packet.AnimationFrame;
             }
         }
     }

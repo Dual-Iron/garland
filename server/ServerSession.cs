@@ -11,6 +11,7 @@ using System.Text;
 
 namespace Server;
 
+// TODO: Make this derive from StoryGameSession. Same for client. Will save me a LOT of headache.
 sealed class ServerSession : GameSession
 {
     record struct PeerData(string Name, int Pid);
