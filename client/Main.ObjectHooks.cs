@@ -137,13 +137,8 @@ partial class Main
             self.blink = 5;
         }
         // Twitch occasionally, for good measure. Only occurs at negative charm.
-        else if (Random.value < data.Charm * -1 / 100) {
+        else if (Random.value < data.Charm * -1 / 80) {
             self.NudgeDrawPosition(Random.value < 0.5f ? 0 : 1, Custom.RNV() * (2 + 2 * Random.value));
-
-            if (self.blink < 3 && Random.value < 0.5f) {
-                self.objectLooker.LookAtNothing();
-                self.blink = 3;
-            }
         }
 
         if (data.HasMark) {
