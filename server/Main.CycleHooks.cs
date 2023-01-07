@@ -1,4 +1,5 @@
 ﻿using Common;
+using LiteNetLib;
 
 namespace Server;
 
@@ -7,9 +8,20 @@ partial class Main
     Timer rainUpdate = Timer.WithPeriod(15 * 40);
     Timer deathRainUpdate = Timer.WithPeriod(2 * 40);
 
-    void SyncDeathRain(GlobalRain.DeathRain rain)
+    public void CatchUp(NetPeer peer, RainWorldGame game)
     {
-        server.Broadcast(new SyncDeathRain((byte)rain.deathRainMode, rain.timeInThisMode, rain.progression, rain.calmBeforeStormSunlight, rain.globalRain.flood, rain.globalRain.floodSpeed));
+        peer.Send(new SyncRain(game.world.rainCycle.timer, game.world.rainCycle.cycleLength, game.globalRain.rainDirection, game.globalRain.rainDirectionGetTo));
+        if (game.globalRain.deathRain != null) {
+            peer.Send(ToPacket(game.globalRain.deathRain));
+        }
+        if (game.world.rainCycle.brokenAntiGrav is AntiGravity.BrokenAntiGravity broken) {
+            peer.Send(new SyncAntiGrav(broken.on, (ushort)broken.counter, broken.from, broken.to));
+        }
+    }
+
+    private SyncDeathRain ToPacket(GlobalRain.DeathRain rain)
+    {
+        return new SyncDeathRain((byte)rain.deathRainMode, rain.timeInThisMode, rain.progression, rain.calmBeforeStormSunlight, rain.globalRain.flood, rain.globalRain.floodSpeed);
     }
 
     private void GameHooks()
@@ -29,10 +41,10 @@ partial class Main
         bool syncIfDirectionChange = self.Intensity > 0 || self.deathRain != null;
         bool directionChange = rainDirectionGetToLast != self.rainDirectionGetTo;
 
-        if (syncIfDirectionChange && directionChange || ClientJustJoined || rainUpdate.Tick()) {
+        if (syncIfDirectionChange && directionChange || rainUpdate.Tick()) {
             rainUpdate.Reset();
 
-            server.Broadcast(new SyncRain((ushort)self.game.world.rainCycle.timer, (ushort)self.game.world.rainCycle.cycleLength, self.rainDirection, self.rainDirectionGetTo));
+            server.Broadcast(new SyncRain(self.game.world.rainCycle.timer, self.game.world.rainCycle.cycleLength, self.rainDirection, self.rainDirectionGetTo));
         }
     }
 
@@ -40,10 +52,10 @@ partial class Main
     {
         orig(self);
 
-        if (ClientJustJoined || deathRainUpdate.Tick()) {
+        if (deathRainUpdate.Tick()) {
             deathRainUpdate.Reset();
 
-            SyncDeathRain(self);
+            server.Broadcast(ToPacket(self));
         }
     }
 
@@ -54,7 +66,7 @@ partial class Main
         if (deathRainModeLast != self.deathRainMode) {
             deathRainUpdate.Reset();
 
-            SyncDeathRain(self);
+            server.Broadcast(ToPacket(self));
         }
     }
 
@@ -62,7 +74,7 @@ partial class Main
     {
         bool onLast = self.on;
         orig(self);
-        if (onLast != self.on || ClientJustJoined) {
+        if (onLast != self.on) {
             server.Broadcast(new SyncAntiGrav(self.on, (ushort)self.counter, self.from, self.to));
         }
     }

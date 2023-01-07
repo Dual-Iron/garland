@@ -20,13 +20,12 @@ partial class Main
         RainCycle rainCycle = self.game.world.rainCycle;
 
         if (SyncRain.Latest(out var syncRain)) {
-            Log.LogDebug(syncRain);
             syncRain.Deconstruct(out var timer, out var cycleLength, out self.rainDirection, out self.rainDirectionGetTo);
 
             rainCycle.timer = timer;
             rainCycle.cycleLength = cycleLength;
 
-            if (self.game.cameras[0].hud?.rainMeter is RainMeter rm && rm.circles.Length != rainCycle.cycleLength / 1200) {
+            if (self.game.cameras[0].hud?.rainMeter is RainMeter rm && rm.circles.Length != Math.Min(30, rainCycle.cycleLength / 1200)) {
                 FixCircles(rm, session);
             }
         }
@@ -64,7 +63,7 @@ partial class Main
         }
 
         // Add the new ones :)
-        rm.circles = new HUDCircle[session.game.world.rainCycle.cycleLength / 1200];
+        rm.circles = new HUDCircle[Math.Min(30, session.game.world.rainCycle.cycleLength / 1200)];
         for (int i = 0; i < rm.circles.Length; i++) {
             rm.circles[i] = new HUDCircle(rm.hud, HUDCircle.SnapToGraphic.smallEmptyCircle, container, 0);
         }

@@ -142,7 +142,7 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Cli
     }
 }
 /// <summary>Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins.</summary>
-public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainDirection, float RainDirectionGetTo) : IPacket
+public record struct SyncRain(int RainTimer, int RainTimerMax, float RainDirection, float RainDirectionGetTo) : IPacket
 {
     public static PacketQueue<SyncRain> Queue { get; } = new();
     public static bool Latest(out SyncRain packet) => Queue.Latest(out _, out packet);
@@ -150,8 +150,8 @@ public record struct SyncRain(ushort RainTimer, ushort RainTimerMax, float RainD
     public PacketKind GetKind() => PacketKind.SyncRain;
     public void Deserialize(NetDataReader reader)
     {
-        RainTimer = reader.GetUShort();
-        RainTimerMax = reader.GetUShort();
+        RainTimer = reader.GetInt();
+        RainTimerMax = reader.GetInt();
         RainDirection = reader.GetFloat();
         RainDirectionGetTo = reader.GetFloat();
 

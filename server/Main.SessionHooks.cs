@@ -95,7 +95,20 @@ partial class Main
         self.game = game;
 
         if (game != null) {
-            self.rainCycle = new(self, Mathf.Lerp(ServerConfig.CycleTimeSecondsMin / 60f, ServerConfig.CycleTimeSecondsMax / 60f, UnityEngine.Random.value));
+            int seconds = UnityEngine.Random.Range(ServerConfig.CycleTimeSecondsMin, ServerConfig.CycleTimeSecondsMax + 1);
+
+            self.rainCycle = new(self, 10) { cycleLength = seconds * 40 };
+
+            TimeSpan time = TimeSpan.FromSeconds(seconds);
+            if ((int)time.TotalHours > 0) {
+                Log.LogDebug($"Cycle length is {(int)time.TotalHours} hours, {time.Minutes} minutes, and {time.Seconds} seconds");
+            }
+            else if ((int)time.TotalMinutes > 0) {
+                Log.LogDebug($"Cycle length is {(int)time.TotalMinutes} minutes and {time.Seconds} seconds");
+            }
+            else {
+                Log.LogDebug($"Cycle length is {(int)time.TotalSeconds} seconds");
+            }
         }
     }
 

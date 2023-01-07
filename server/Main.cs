@@ -13,7 +13,6 @@ partial class Main
     public static Main Instance => instance ??= new();
     public static ManualLogSource Log { get; } = Logger.CreateLogSource("Server");
 
-    public bool ClientJustJoined { get; private set; }
     public readonly NetManager server;
 
     public Main()
@@ -47,8 +46,6 @@ partial class Main
                 request.Reject();
         };
         listener.PeerConnectedEvent += peer => {
-            ClientJustJoined = true;
-
             DateTime now = DateTime.UtcNow;
             Log.LogDebug($"Connected to {peer.EndPoint} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
@@ -69,6 +66,8 @@ partial class Main
                 EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, player.ID(), player.Room.name);
 
                 peer.Send(packet, DeliveryMethod.ReliableOrdered);
+
+                CatchUp(peer, game);
             }
         };
         listener.PeerDisconnectedEvent += (peer, info) => {
@@ -133,8 +132,6 @@ partial class Main
     {
         // Don't play sounds from the console.
         AudioListener.pause = true;
-
-        ClientJustJoined = false;
 
         try {
             server.PollEvents();

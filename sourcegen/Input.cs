@@ -22,8 +22,8 @@ EnterSession = 0x200 {
 
 # Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins.
 SyncRain = 0x201 {
-    u16 RainTimer
-    u16 RainTimerMax
+    i32 RainTimer
+    i32 RainTimerMax
     f32 RainDirection
     f32 RainDirectionGetTo
 }
