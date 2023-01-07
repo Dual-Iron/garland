@@ -133,7 +133,7 @@ partial class Main
         }
 
         // Saint eyes :)
-        if (data.Charm > 0.50f) {
+        if (data.Charm > 0.60f) {
             self.blink = 5;
         }
         // Twitch occasionally, for good measure. Only occurs at negative charm.
@@ -161,7 +161,7 @@ partial class Main
         sLeaser.sprites[1].scaleX += fat * 0.08f;
 
         float charm = self.player.Data()?.Charm ?? 0;
-        if (charm < -0.50f) {
+        if (charm < -0.60f) {
             // If they're really ugly, make them *really* ugly by scaling the face up slightly.
             if (sLeaser.sprites[9].scaleX is 1 or -1) sLeaser.sprites[9].scaleX -= charm * 0.1f;
             if (sLeaser.sprites[9].scaleY is 1 or -1) sLeaser.sprites[9].scaleY -= charm * 0.1f;
