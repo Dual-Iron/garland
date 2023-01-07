@@ -8,7 +8,21 @@ partial class Main
 {
     private void GameHooks()
     {
+        On.HUD.RainMeter.ctor += RainMeter_ctor;
         On.GlobalRain.Update += GlobalRain_Update;
+    }
+
+    private void RainMeter_ctor(On.HUD.RainMeter.orig_ctor orig, RainMeter self, HUD.HUD hud, FContainer fContainer)
+    {
+        const int maxCircleCount = 30;
+
+        var cyc = (hud.owner as Player)!.room.world.rainCycle;
+        var len = cyc.cycleLength;
+        if (cyc.cycleLength > maxCircleCount * 1200) {
+            cyc.cycleLength = maxCircleCount * 1200;
+        }
+        try { orig(self, hud, fContainer); }
+        finally { cyc.cycleLength = len; }
     }
 
     private void GlobalRain_Update(On.GlobalRain.orig_Update orig, GlobalRain self)
@@ -24,10 +38,6 @@ partial class Main
 
             rainCycle.timer = timer;
             rainCycle.cycleLength = cycleLength;
-
-            if (self.game.cameras[0].hud?.rainMeter is RainMeter rm && rm.circles.Length != Math.Min(30, rainCycle.cycleLength / 1200)) {
-                FixCircles(rm, session);
-            }
         }
 
         if (SyncDeathRain.Latest(out var deathRain)) {
@@ -50,22 +60,6 @@ partial class Main
 
             rainCycle.brokenAntiGrav.progress = 0;
             rainCycle.brokenAntiGrav.counter = counter;
-        }
-    }
-
-    private void FixCircles(RainMeter rm, ClientSession session)
-    {
-        FContainer container = rm.circles[0].sprite.container;
-
-        // Remove old circles
-        foreach (var circle in rm.circles) {
-            circle.sprite.RemoveFromContainer();
-        }
-
-        // Add the new ones :)
-        rm.circles = new HUDCircle[Math.Min(30, session.game.world.rainCycle.cycleLength / 1200)];
-        for (int i = 0; i < rm.circles.Length; i++) {
-            rm.circles[i] = new HUDCircle(rm.hud, HUDCircle.SnapToGraphic.smallEmptyCircle, container, 0);
         }
     }
 

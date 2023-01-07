@@ -22,9 +22,6 @@ partial class Main
         // Fix SlugcatWorld
         On.RoomSettings.ctor += RoomSettings_ctor;
 
-        // Just debug stuff
-        On.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
-
         // Jump right into the game immediately (because lobbies aren't implemented)
         On.RainWorld.LoadSetupValues += RainWorld_LoadSetupValues;
 
@@ -47,13 +44,6 @@ partial class Main
     private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, int playerChar)
     {
         orig(self, name, region, template, firstTemplate, ServerConfig.SlugcatWorld);
-    }
-
-    private void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
-    {
-        orig(self, ID);
-
-        Log.LogDebug($"Switched process to {ID}");
     }
 
     private RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)

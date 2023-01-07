@@ -11,7 +11,8 @@ partial class Main
         // Set chunk positions etc. Pre- and post-update stuff.
         On.RainWorldGame.Update += UpdateState;
 
-        // Send input to server, and set input for other players
+        // Send input to server, set input for other players, and fix playerNumber-related crash
+        On.Player.ctor += Player_ctor;
         On.Player.checkInput += Player_checkInput;
         On.RWInput.PlayerInput += RWInput_PlayerInput;
 
@@ -52,6 +53,14 @@ partial class Main
         }
     }
 
+    private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature p, World world)
+    {
+        int num = p.PlayerState().playerNumber;
+        p.PlayerState().playerNumber = 0;
+        try { orig(self, p, world); }
+        finally { p.PlayerState().playerNumber = num; }
+    }
+
     private void Player_checkInput(On.Player.orig_checkInput orig, Player self)
     {
         if (self.Game().session is not ClientSession session) {
@@ -60,13 +69,24 @@ partial class Main
         }
 
         // If this is us, then send our input off to the server!
-        if (self.IsMyPlayer()) {
+        if (self.IsMyPlayer() && session.game.pauseMenu == null) {
             var package = RWInput.PlayerInput(playerNumber: 0, self.room.game.rainWorld.options, self.room.game.setupValues);
 
             ServerPeer?.Send(package.ToPacket(), LiteNetLib.DeliveryMethod.ReliableSequenced);
         }
 
-        orig(self);
+        // Prevent accessing Options array with num > 3 by setting it to a temporary.
+        int num = self.playerState.playerNumber;
+        if (self.stun != 0 || self.dead) {
+            self.playerState.playerNumber = 0;
+        }
+        try { orig(self); }
+        finally { self.playerState.playerNumber = num; }
+
+        if (session.game.pauseMenu != null) {
+            self.input[0] = default;
+            self.mapInput = default;
+        }
 
         if (self.IsMyPlayer()) {
             return;
@@ -94,7 +114,7 @@ partial class Main
     {
         if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession) {
             // Just take player 0's input. The other players aren't really there.
-            return game.pauseMenu == null ? orig(0, options, setup) : default;
+            playerNumber = 0;
         }
         return orig(playerNumber, options, setup);
     }
@@ -110,7 +130,7 @@ partial class Main
 
         if (self.player.Data() is SharedPlayerData data)
             foreach (var tailSeg in self.tail) {
-                tailSeg.rad *= Custom.LerpMap(data.Fat * 0.65f + data.Speed * 0.35f, -1, +1, 0.75f, 1.25f);
+                tailSeg.rad *= Custom.LerpMap(data.Fat * 0.65f - data.Speed * 0.35f, -1, +1, 0.6f, 1.4f);
             }
     }
 

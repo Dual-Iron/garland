@@ -18,6 +18,10 @@ partial class Main
 
         // Sync client players
         On.Player.Update += Player_Update;
+
+        // Fix playerNumber-related crash
+        On.Player.ctor += Player_ctor;
+        On.Player.checkInput += Player_checkInput;
     }
 
     private void AbstractCreature_Die(On.AbstractCreature.orig_Die orig, AbstractCreature self)
@@ -91,5 +95,24 @@ partial class Main
             InputBitmask9 = p.input[9].ToPacket().Bitmask,
         };
         p.BroadcastRelevant(update, LiteNetLib.DeliveryMethod.ReliableSequenced);
+    }
+
+    private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature p, World world)
+    {
+        int num = p.PlayerState().playerNumber;
+        p.PlayerState().playerNumber = 0;
+        try { orig(self, p, world); }
+        finally { p.PlayerState().playerNumber = num; }
+    }
+
+    private void Player_checkInput(On.Player.orig_checkInput orig, Player self)
+    {
+        // Prevent accessing Options array with num > 3 by setting it to a temporary.
+        int num = self.playerState.playerNumber;
+        if (self.stun != 0 || self.dead) {
+            self.playerState.playerNumber = 0;
+        }
+        try { orig(self); }
+        finally { self.playerState.playerNumber = num; }
     }
 }
