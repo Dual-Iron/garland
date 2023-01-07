@@ -94,7 +94,7 @@ partial class Main
     {
         if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession) {
             // Just take player 0's input. The other players aren't really there.
-            playerNumber = 0;
+            return game.pauseMenu == null ? orig(0, options, setup) : default;
         }
         return orig(playerNumber, options, setup);
     }
@@ -132,7 +132,7 @@ partial class Main
         }
 
         // Saint eyes :)
-        if (data.Charm > 0.75f) {
+        if (data.Charm > 0.50f) {
             self.blink = 5;
         }
         // Twitch occasionally, for good measure. Only occurs at negative charm.
@@ -160,7 +160,7 @@ partial class Main
         sLeaser.sprites[1].scaleX += fat * 0.08f;
 
         float charm = self.player.Data()?.Charm ?? 0;
-        if (charm < -0.75f) {
+        if (charm < -0.50f) {
             // If they're really ugly, make them *really* ugly by scaling the face up slightly.
             if (sLeaser.sprites[9].scaleX is 1 or -1) sLeaser.sprites[9].scaleX -= charm * 0.1f;
             if (sLeaser.sprites[9].scaleY is 1 or -1) sLeaser.sprites[9].scaleY -= charm * 0.1f;
@@ -195,7 +195,7 @@ partial class Main
     // Make flies buzz around gross, fat players
     private bool MiniFly_ViableForBuzzaround(On.MiniFly.orig_ViableForBuzzaround orig, MiniFly self, AbstractCreature crit)
     {
-        if (crit.state.alive && crit.realizedCreature is Player p && p.Data() is SharedPlayerData data && data.Charm < 0 && data.Charm < data.Fat) {
+        if (crit.state.alive && crit.realizedCreature is Player p && p.Data() is SharedPlayerData data && data.Charm < 0 && data.Charm + 1 < data.Fat) {
             crit.state.alive = false;
             try { return orig(self, crit); }
             finally { crit.state.alive = true; }

@@ -53,16 +53,16 @@ sealed class ServerSession : GameSession
         Color32 skinColor = RXColor.ColorFromHSL(hue, saturation, luminosity);
 
         hue = Rng.value;
-        saturation = Rng.value * Rng.value;
-        luminosity = luminosity * luminosity * 0.5f;
+        saturation = Lerp(1f, 0f, Rng.value * Rng.value); // Make gray eyes rarer
+        luminosity = Lerp(0f, 0.32f, Rng.value);
 
         Color32 eyeColor = RXColor.ColorFromHSL(hue, saturation, luminosity);
         if (eyeColor.b == 0)
             eyeColor.b = 1; // prevent pureblack
 
-        float fat = Rng.value * 2 - 1;
-        float speed = Rng.value * 2 - 1;
-        float charm = Rng.value * 2 - 1;
+        float fat = Lerp(-1, +1, Rng.value) * Rng.value;
+        float speed = Lerp(-1, +1, Rng.value) * Rng.value;
+        float charm = Lerp(-1, +1, Rng.value) * Rng.value;
 
         // For stats
         float sFat = fat * 0.15f;
@@ -93,8 +93,8 @@ sealed class ServerSession : GameSession
             PoleClimbSpeed = 1 + sSpeed * 1.5f - sFat * 0.5f,
             CorridorClimbSpeed = 1 + sSpeed - sFat * 0.5f,
             Weight = 1 + sFat - sCharm * 0.8f,
-            VisBonus = sSpeed - sCharm,
-            SneakStealth = 0.5f + sCharm,
+            VisBonus = -sCharm,
+            SneakStealth = 0.5f + sCharm - sSpeed,
             Loudness = 1 + sFat * 2 - sCharm,
             LungWeakness = 1 + sCharm * 1.2f,
             Ill = false,
