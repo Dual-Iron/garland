@@ -483,7 +483,7 @@ public record struct SyncPosition(int ID, byte Chunk, Vector2 Pos, Vector2 PosLa
     }
 }
 /// <summary>Introduces a player to a client.</summary>
-public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte SkinB, byte FoodMax, byte FoodSleep, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float Weight, float VisBonus, float SneakStealth, float Loudness, float LungWeakness, byte Bitmask) : IPacket
+public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte SkinB, byte EyeR, byte EyeG, byte EyeB, float Fat, float Speed, float Charm, byte FoodMax, byte FoodSleep, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float Weight, float VisBonus, float SneakStealth, float Loudness, float LungWeakness, byte Bitmask) : IPacket
 {
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
     public static bool Latest(out IntroPlayer packet) => Queue.Latest(out _, out packet);
@@ -496,6 +496,12 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
         SkinR = reader.GetByte();
         SkinG = reader.GetByte();
         SkinB = reader.GetByte();
+        EyeR = reader.GetByte();
+        EyeG = reader.GetByte();
+        EyeB = reader.GetByte();
+        Fat = reader.GetFloat();
+        Speed = reader.GetFloat();
+        Charm = reader.GetFloat();
         FoodMax = reader.GetByte();
         FoodSleep = reader.GetByte();
         RunSpeed = reader.GetFloat();
@@ -516,6 +522,12 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
         writer.Put(SkinR);
         writer.Put(SkinG);
         writer.Put(SkinB);
+        writer.Put(EyeR);
+        writer.Put(EyeG);
+        writer.Put(EyeB);
+        writer.Put(Fat);
+        writer.Put(Speed);
+        writer.Put(Charm);
         writer.Put(FoodMax);
         writer.Put(FoodSleep);
         writer.Put(RunSpeed);

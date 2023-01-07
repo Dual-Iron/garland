@@ -137,6 +137,12 @@ IntroPlayer = 0x250 {
     u8   SkinR
     u8   SkinG
     u8   SkinB
+    u8   EyeR
+    u8   EyeG
+    u8   EyeB
+    f32  Fat
+    f32  Speed
+    f32  Charm
     u8   FoodMax
     u8   FoodSleep
     f32  RunSpeed

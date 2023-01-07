@@ -50,35 +50,55 @@ sealed class ServerSession : GameSession
         float saturation = Lerp(1f, 0.80f, Rng.value);
         float luminosity = Lerp(1f, 0.60f, Rng.value);
 
-        Color color = RXColor.ColorFromHSL(hue, saturation, luminosity);
+        Color32 skinColor = RXColor.ColorFromHSL(hue, saturation, luminosity);
 
-        float fat = Lerp(-0.1f, 0.15f, Rng.value);
-        float speed = Lerp(-0.05f, 0.1f, Rng.value);
-        float sneakiness = Lerp(-0.15f, 0.15f, Rng.value);
+        hue = Rng.value;
+        saturation = Rng.value * Rng.value;
+        luminosity = luminosity * luminosity * 0.5f;
+
+        Color32 eyeColor = RXColor.ColorFromHSL(hue, saturation, luminosity);
+        if (eyeColor.b == 0)
+            eyeColor.b = 1; // prevent pureblack
+
+        float fat = Rng.value * 2 - 1;
+        float speed = Rng.value * 2 - 1;
+        float charm = Rng.value * 2 - 1;
+
+        // For stats
+        float sFat = fat * 0.15f;
+        float sSpeed = speed * 0.08f;
+        float sCharm = charm * 0.15f;
 
         Rng.seed = seed;
 
-        int foodSleep = 4 + (int)(speed * 30 + fat * 5);
-        int foodMax = Max(7 + (int)(fat * 30), foodSleep + 1);
+        int foodSleep = 4 + (int)(speed * 2.4f + fat * 1.2f);
+        int foodMax = Max(7 + (int)(fat * 3.6f), foodSleep + 1);
 
-        Main.Log.LogDebug($"Generated stats for player {pid}: fat {fat:P0}, speed {speed:P0}, sneakiness {sneakiness:P0}");
+        static string Fmt(float stat) => stat > 0 ? $"+{RoundToInt(stat * 100)}%" : $"{RoundToInt(stat * 100)}%";
+        static string FmtColor(Color32 color) => $"0x{color.r:X}{color.g:X}{color.b:X}";
+
+        Main.Log.LogDebug($"Player#{pid} stats: fat {Fmt(fat)}, speed {Fmt(speed)}, charm {Fmt(charm)}, skin color {FmtColor(skinColor)}, eye color {FmtColor(eyeColor)}");
 
         return new SharedPlayerData() {
-            SkinColor = color,
+            SkinColor = skinColor,
+            EyeColor = eyeColor,
+            EatsMeat = foodSleep > 5,
+            Fat = fat,
+            Speed = speed,
+            Charm = charm,
 
             FoodMax = (byte)foodMax,
             FoodSleep = (byte)foodSleep,
-            RunSpeed = 1 + speed - fat * 0.5f,
-            PoleClimbSpeed = 1 + speed * 1.5f - fat * 0.5f,
-            CorridorClimbSpeed = 1 + speed - fat * 0.5f,
-            Weight = 1 + fat,
-            VisBonus = speed - sneakiness,
-            SneakStealth = 0.5f + sneakiness,
-            Loudness = 1 + fat * 2 - sneakiness,
-            LungWeakness = 1 - speed * 2,
+            RunSpeed = 1 + sSpeed - sFat * 0.5f,
+            PoleClimbSpeed = 1 + sSpeed * 1.5f - sFat * 0.5f,
+            CorridorClimbSpeed = 1 + sSpeed - sFat * 0.5f,
+            Weight = 1 + sFat,
+            VisBonus = sSpeed - sCharm,
+            SneakStealth = 0.5f + sCharm,
+            Loudness = 1 + sFat * 2 - sCharm,
+            LungWeakness = 1 - sSpeed * 2,
             Ill = false,
 
-            EatsMeat = foodSleep > 6,
             Glows = false,
             HasMark = false,
         };

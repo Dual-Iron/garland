@@ -4,8 +4,6 @@ namespace Common;
 
 sealed class SharedPlayerData
 {
-    public Color32 SkinColor = Color.white;
-
     // SlugcatStats
     public byte FoodMax;
     public byte FoodSleep;
@@ -19,9 +17,17 @@ sealed class SharedPlayerData
     public float LungWeakness;
     public bool Ill;
 
-    public bool EatsMeat = false;
+    // Vanilla data
     public bool Glows = false;
     public bool HasMark = false;
+
+    // Custom
+    public Color32 SkinColor = new(255, 255, 255, 255);
+    public Color32 EyeColor = new(0, 0, 1, 255);
+    public bool EatsMeat;
+    public float Fat;
+    public float Speed;
+    public float Charm;
 
     public SlugcatStats Stats()
     {
@@ -51,13 +57,13 @@ sealed class SharedPlayerData
         };
     }
 
-    public IntroPlayer ToPacket(int id, int room) => new(id, room, SkinColor.r, SkinColor.g, SkinColor.b, 
+    public IntroPlayer ToPacket(int id, int room) => new(id, room, SkinColor.r, SkinColor.g, SkinColor.b, EyeColor.r, EyeColor.g, EyeColor.b, Fat, Speed, Charm,
         FoodMax, FoodSleep, RunSpeed, PoleClimbSpeed, CorridorClimbSpeed, Weight, VisBonus, SneakStealth, Loudness, LungWeakness, 
         IntroPlayer.ToBitmask(Ill, EatsMeat, Glows, HasMark)
         );
 
     public static SharedPlayerData FromPacket(IntroPlayer p) => new() {
-        SkinColor = new(p.SkinR, p.SkinG, p.SkinB, 255),
+        SkinColor = new(p.SkinR, p.SkinG, p.SkinB, 255), EyeColor = new(p.EyeR, p.EyeG, p.EyeB, 255), Fat = p.Fat, Speed = p.Speed, Charm = p.Charm,
         FoodMax = p.FoodMax, FoodSleep = p.FoodSleep, RunSpeed = p.RunSpeed, PoleClimbSpeed = p.PoleClimbSpeed, CorridorClimbSpeed = p.CorridorClimbSpeed,
         Weight = p.Weight, VisBonus = p.VisBonus, SneakStealth = p.SneakStealth, Loudness = p.Loudness, LungWeakness = p.LungWeakness, Ill = p.Ill,
         EatsMeat = p.EatsMeat, Glows = p.EatsMeat, HasMark = p.HasMark

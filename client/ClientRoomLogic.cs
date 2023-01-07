@@ -68,6 +68,8 @@ sealed class ClientRoomLogic
 
             session.Objects[packet.ID] = p.realizedObject;
             session.AddPlayer(p);
+
+            Main.Log.LogDebug($"Introduced player {packet.ID}");
         }
     }
 

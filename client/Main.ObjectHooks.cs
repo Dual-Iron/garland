@@ -18,9 +18,13 @@ partial class Main
         // Allow omnivorous players to eat meat
         On.Player.CanEatMeat += Player_CanEatMeat;
 
-        // Set player colors and The Mark
+        // Set player graphics and The Mark
+        On.PlayerGraphics.ctor += PlayerGraphics_ctor;
         On.PlayerGraphics.Update += PlayerGraphics_Update;
+        On.PlayerGraphics.DrawSprites += PlayerGraphics_DrawSprites;
         On.PlayerGraphics.SlugcatColor += PlayerGraphics_SlugcatColor;
+        On.PlayerGraphics.ApplyPalette += PlayerGraphics_ApplyPalette;
+        On.MiniFly.ViableForBuzzaround += MiniFly_ViableForBuzzaround;
     }
 
     private void UpdateState(On.RainWorldGame.orig_Update orig, RainWorldGame self)
@@ -100,14 +104,66 @@ partial class Main
         return orig(self, crit) || self.Data()?.EatsMeat == true;
     }
 
+    private void PlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self, PhysicalObject ow)
+    {
+        orig(self, ow);
+
+        foreach (var tailSeg in self.tail) {
+            tailSeg.rad *= Custom.LerpMap(self.player.Data()?.Fat ?? 0, -1, +1, 0.75f, 1.25f);
+        }
+    }
+
     private void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
     {
         float markAlpha = self.markAlpha;
-        orig(self);
-        if (self.player.Data() is SharedPlayerData data && data.HasMark) {
-            float alpha = Mathf.InverseLerp(30f, 80f, self.player.touchedNoInputCounter) - Random.value * Mathf.InverseLerp(80f, 30f, self.player.touchedNoInputCounter);
 
-            self.markAlpha = Custom.LerpAndTick(markAlpha, Mathf.Clamp(alpha, 0f, 1f) * self.markBaseAlpha, 0.1f, 1/30f);
+        orig(self);
+
+        if (self.player.Data() is not SharedPlayerData data) {
+            return;
+        }
+
+        // Increase or decrease breathing speed by 50% * speed
+        self.breath += (self.breath - self.lastBreath) * data.Speed * 0.5f;
+
+        // If Speed < 0, make player look at objects for longer.
+        if (Random.value < data.Speed * -1 / 80) {
+            self.objectLooker.timeLookingAtThis = 0;
+        }
+
+        // Saint eyes :)
+        if (data.Charm > 0.75f) {
+            self.blink = 5;
+        }
+        // Twitch occasionally, for good measure. Only occurs at negative charm.
+        else if (Random.value < data.Charm * -1 / 100) {
+            self.NudgeDrawPosition(Random.value < 0.5f ? 0 : 1, Custom.RNV() * (2 + 2 * Random.value));
+
+            if (self.blink < 3 && Random.value < 0.5f) {
+                self.objectLooker.LookAtNothing();
+                self.blink = 3;
+            }
+        }
+
+        if (data.HasMark) {
+            float alpha = Mathf.InverseLerp(30f, 80f, self.player.touchedNoInputCounter) - Random.value * Mathf.InverseLerp(80f, 30f, self.player.touchedNoInputCounter);
+            self.markAlpha = Custom.LerpAndTick(markAlpha, Mathf.Clamp(alpha, 0f, 1f) * self.markBaseAlpha, 0.1f, 1 / 30f);
+        }
+    }
+
+    private void PlayerGraphics_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+    {
+        orig(self, sLeaser, rCam, timeStacker, camPos);
+
+        float fat = self.player.Data()?.Fat ?? 0;
+        sLeaser.sprites[0].scaleX += fat * 0.15f;
+        sLeaser.sprites[1].scaleX += fat * 0.08f;
+
+        float charm = self.player.Data()?.Charm ?? 0;
+        if (charm < -0.75f) {
+            // If they're really ugly, make them *really* ugly by scaling the face up slightly.
+            if (sLeaser.sprites[9].scaleX is 1 or -1) sLeaser.sprites[9].scaleX -= charm * 0.1f;
+            if (sLeaser.sprites[9].scaleY is 1 or -1) sLeaser.sprites[9].scaleY -= charm * 0.1f;
         }
     }
 
@@ -117,5 +173,35 @@ partial class Main
             return data.SkinColor;
         }
         return orig(i);
+    }
+
+    private void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
+    {
+        orig(self, sLeaser, rCam, palette);
+
+        Color bodyColor = PlayerGraphics.SlugcatColor(self.player.playerState.slugcatCharacter);
+        Color eyeColor = self.player.Data()?.EyeColor ?? palette.blackColor;
+        if (self.malnourished > 0f) {
+            float num = (!self.player.Malnourished) ? Mathf.Max(0f, self.malnourished - 0.005f) : self.malnourished;
+            bodyColor = Color.Lerp(bodyColor, Color.gray, 0.4f * num);
+            eyeColor = Color.Lerp(eyeColor, Color.Lerp(Color.white, palette.fogColor, 0.5f), 0.2f * num * num);
+        }
+        for (int i = 0; i < sLeaser.sprites.Length; i++) {
+            sLeaser.sprites[i].color = bodyColor;
+        }
+        sLeaser.sprites[9].color = eyeColor;
+    }
+
+    // Make flies buzz around gross, fat players
+    private bool MiniFly_ViableForBuzzaround(On.MiniFly.orig_ViableForBuzzaround orig, MiniFly self, AbstractCreature crit)
+    {
+        if (crit.state.alive && crit.realizedCreature is Player p && p.Data() is SharedPlayerData data && data.Charm < 0 && data.Charm < data.Fat) {
+            crit.state.alive = false;
+            try { return orig(self, crit); }
+            finally { crit.state.alive = true; }
+        }
+        else {
+            return orig(self, crit);
+        }
     }
 }
