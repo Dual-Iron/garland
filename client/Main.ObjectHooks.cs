@@ -108,9 +108,10 @@ partial class Main
     {
         orig(self, ow);
 
-        foreach (var tailSeg in self.tail) {
-            tailSeg.rad *= Custom.LerpMap(self.player.Data()?.Fat ?? 0, -1, +1, 0.75f, 1.25f);
-        }
+        if (self.player.Data() is SharedPlayerData data)
+            foreach (var tailSeg in self.tail) {
+                tailSeg.rad *= Custom.LerpMap(data.Fat * 0.65f + data.Speed * 0.35f, -1, +1, 0.75f, 1.25f);
+            }
     }
 
     private void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)

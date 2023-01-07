@@ -10,6 +10,7 @@ sealed class OnlineMenu : Menu.Menu
 
     readonly SimpleButton back;
     readonly SimpleButton join;
+    readonly SimpleButton joinOzql;
 
     public OnlineMenu(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
     {
@@ -28,7 +29,8 @@ sealed class OnlineMenu : Menu.Menu
         }));
 
         pages[0].subObjects.Add(back = new SimpleButton(this, pages[0], Translate("BACK"), "", new Vector2(200, 50), new Vector2(110, 30)));
-        pages[0].subObjects.Add(join = new SimpleButton(this, pages[0], "JOIN", "", new Vector2(1056, 50), new Vector2(110, 30)));
+        pages[0].subObjects.Add(join = new SimpleButton(this, pages[0], "JOIN SELF", "", new Vector2(1056, 50), new Vector2(110, 30)));
+        pages[0].subObjects.Add(joinOzql = new SimpleButton(this, pages[0], "JOIN OTHER", "", new Vector2(1056, 130), new Vector2(110, 30)));
     }
 
     public override void Singal(MenuObject sender, string message)
@@ -41,6 +43,10 @@ sealed class OnlineMenu : Menu.Menu
             Main.Instance.StartConnecting("localhost", port);
             PlaySound(SoundID.MENU_Start_New_Game);
         }
+        else if (sender == joinOzql) {
+            Main.Instance.StartConnecting(Private.Host, port);
+            PlaySound(SoundID.MENU_Start_New_Game);
+        }
     }
 
     public override void Update()
@@ -51,13 +57,14 @@ sealed class OnlineMenu : Menu.Menu
 
         back.GetButtonBehavior.greyedOut = greyed;
         join.GetButtonBehavior.greyedOut = greyed;
+        joinOzql.GetButtonBehavior.greyedOut = greyed;
 
         if (EnterSession.Latest(out var packet)) {
             Main.Instance.startPacket = packet;
         }
 
         if (manager.upcomingProcess == null && Main.Instance.ClientState == ConnectionState.Connected && Main.Instance.startPacket is EnterSession s) {
-            Main.Log.LogDebug($"OK to enter game: {s}");
+            Main.Log.LogDebug($"Joining game: {s}");
 
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
             manager.menuSetup.startGameCondition = (ProcessManager.MenuSetup.StoryGameInitCondition)(-40);
