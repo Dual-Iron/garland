@@ -157,6 +157,8 @@ UpdatePlayer = 0x251 {
     u8  BodyMode
     u8  Animation
     u8  AnimationFrame
+    i8  FlipDirection
+    i8  FlipDirectionLast
     vec HeadPos
     vec HeadVel
     vec ButtPos

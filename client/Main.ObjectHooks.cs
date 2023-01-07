@@ -42,6 +42,8 @@ partial class Main
                 p.bodyMode = (Player.BodyModeIndex)packet.BodyMode;
                 p.animation = (Player.AnimationIndex)packet.Animation;
                 p.animationFrame = packet.AnimationFrame;
+                p.flipDirection = packet.FlipDirection;
+                p.lastFlipDirection = packet.FlipDirectionLast;
             }
         }
     }

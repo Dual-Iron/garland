@@ -63,6 +63,8 @@ partial class Main
             BodyMode = (byte)p.bodyMode,
             Animation = (byte)p.animation,
             AnimationFrame = (byte)p.animationFrame,
+            FlipDirection = (sbyte)p.flipDirection,
+            FlipDirectionLast = (sbyte)p.lastFlipDirection,
             HeadPos = p.firstChunk.pos,
             HeadVel = p.firstChunk.vel,
             ButtPos = p.bodyChunks[1].pos,
