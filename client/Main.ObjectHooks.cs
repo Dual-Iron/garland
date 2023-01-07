@@ -67,7 +67,7 @@ partial class Main
         }
 
         // Set input according to what server says.
-        if (session.UpdatePlayer.TryGetValue(self.Pid(), out var packet)) {
+        if (session.UpdatePlayer.TryGetValue(self.ID(), out var packet)) {
             self.input[0] = new Common.Input(packet.InputDir0, packet.InputBitmask0).ToPackage();
             self.input[1] = new Common.Input(packet.InputDir1, packet.InputBitmask1).ToPackage();
             self.input[2] = new Common.Input(packet.InputDir2, packet.InputBitmask2).ToPackage();
@@ -80,7 +80,7 @@ partial class Main
             self.input[9] = new Common.Input(packet.InputDir9, packet.InputBitmask9).ToPackage();
         }
         // Or stand still.
-        else if (session.PlayerLastInput.TryGetValue(self.Pid(), out var input)) {
+        else if (session.PlayerLastInput.TryGetValue(self.ID(), out var input)) {
             self.input[0] = input.ToPackage();
         }
     }

@@ -66,7 +66,7 @@ partial class Main
                     player.RealizeInRoom();
                 }
 
-                EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, player.ID.number, player.Room.name);
+                EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, player.ID(), player.Room.name);
 
                 peer.Send(packet, DeliveryMethod.ReliableOrdered);
             }

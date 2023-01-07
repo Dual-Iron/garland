@@ -23,10 +23,10 @@ sealed class ClientSession : GameSession
 
     public override void AddPlayer(AbstractCreature player)
     {
-        if (player.ID.number == ClientPid) {
+        if (player.ID() == ClientPid) {
             base.AddPlayer(player);
 
-            Main.Log.LogDebug($"Added my player ({player.ID.number}) to session");
+            Main.Log.LogDebug($"Added my player ({player.ID()}) to session");
         }
     }
 
@@ -36,22 +36,4 @@ sealed class ClientSession : GameSession
 
     public AbstractCreature? MyPlayer => Players.Count > 0 ? Players[0] : null;
     public SharedPlayerData? MyPlayerData => Players.Count > 0 ? ClientData[0] : null;
-}
-
-static class ClientExt
-{
-    public static SharedPlayerData? Data(this Player p)
-    {
-        if (p.abstractPhysicalObject.world.game.session is ClientSession session) {
-            return session.GetPlayerData(p.abstractCreature);
-        }
-        return null;
-    }
-
-    public static int Pid(this Player p) => p.abstractPhysicalObject.ID.number;
-
-    public static bool IsMyPlayer(this Player p)
-    {
-        return p.abstractPhysicalObject.world.game.session is ClientSession session && session.MyPlayer == p.abstractPhysicalObject;
-    }
 }

@@ -46,9 +46,9 @@ sealed class ServerSession : GameSession
         int seed = Rng.seed;
         Rng.seed = hash.GetHashCode();
 
-        float hue = Pow(Rng.value, 3f); // Pow to make hotter colors more common
-        float saturation = Lerp(1f, 0.8f, Rng.value * Rng.value);
-        float luminosity = Lerp(1f, 0.5f, Rng.value * Rng.value);
+        float hue = Rng.value * Rng.value;
+        float saturation = Lerp(1f, 0.80f, Rng.value);
+        float luminosity = Lerp(1f, 0.60f, Rng.value);
 
         Color color = RXColor.ColorFromHSL(hue, saturation, luminosity);
 
@@ -138,11 +138,6 @@ sealed class ServerSession : GameSession
         peers.Remove(peer.Id);
     }
 
-    public void SendObjectUpdate<T>(PhysicalObject o, T packet) where T : IPacket
-    {
-        RoomRealizer.ObjectUpdate(o, packet);
-    }
-
     public override void AddPlayer(AbstractCreature player)
     {
         if (player.PlayerState().playerNumber == -1) {
@@ -159,17 +154,4 @@ sealed class ServerSession : GameSession
     public SharedPlayerData? GetPlayerData(NetPeer peer) => peers.TryGetValue(peer.Id, out PeerData data) ? Save.playerData[data.Pid].Shared : null;
 
     public AbstractCreature? GetPlayer(NetPeer peer) => peers.TryGetValue(peer.Id, out PeerData data) ? Players[data.Pid] : null;
-}
-
-static class SessionExt
-{
-    public static SharedPlayerData? Data(this Player player)
-    {
-        var session = (ServerSession)player.abstractPhysicalObject.world.game.session;
-
-        return session.GetPlayerData(player.abstractPhysicalObject.ID.number);
-    }
-
-    public static ServerSession Session(this PhysicalObject o) => (ServerSession)o.Game().session;
-    public static ServerSession Session(this RainWorldGame game) => (ServerSession)game.session;
 }

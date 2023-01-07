@@ -32,13 +32,11 @@ sealed class ServerRoomLogic
 
     // TODO: re-abstractizing rooms lol
 
-    public void ObjectUpdate<T>(PhysicalObject p, T packet) where T : IPacket
+    public void BroadcastRelevant<T>(int room, T packet, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered) where T : IPacket
     {
-        int roomIndex = p.abstractPhysicalObject.pos.room;
-
         foreach (TrackedPeer peer in trackedPeers) {
-            if (peer.RoomStates[roomIndex] == RoomState.Synced) {
-                peer.NetPeer.Send(packet, DeliveryMethod.ReliableSequenced);
+            if (peer.RoomStates[room] == RoomState.Synced) {
+                peer.NetPeer.Send(packet, deliveryMethod);
             }
         }
     }
@@ -78,7 +76,7 @@ sealed class ServerRoomLogic
     {
         if (self.realizedObject != null) {
             foreach (TrackedPeer peer in trackedPeers) {
-                UnloadObject(peer, self.ID.number);
+                UnloadObject(peer, self.ID());
             }
         }
         orig(self, coord);
@@ -91,7 +89,7 @@ sealed class ServerRoomLogic
         if (self.realizedObject != null) {
             foreach (TrackedPeer peer in trackedPeers) {
                 if (peer.RoomStates[newCoord.room] == RoomState.Abstract) {
-                    UnloadObject(peer, self.ID.number);
+                    UnloadObject(peer, self.ID());
                 }
             }
         }
@@ -125,7 +123,7 @@ sealed class ServerRoomLogic
 
         foreach (var entity in room.entities) {
             if (entity is AbstractPhysicalObject apo && apo.realizedObject != null) {
-                UnloadObject(peer, apo.ID.number);
+                UnloadObject(peer, apo.ID());
             }
         }
     }
@@ -138,7 +136,7 @@ sealed class ServerRoomLogic
         foreach (var entity in room.entities) {
             if (entity is AbstractPhysicalObject apo && apo.realizedObject != null) {
                 foreach (var peer in trackedPeers) {
-                    UnloadObject(peer, apo.ID.number);
+                    UnloadObject(peer, apo.ID());
                 }
             }
         }
@@ -231,13 +229,13 @@ sealed class ServerRoomLogic
 
     private void Introduce(TrackedPeer peer, PhysicalObject realizedObject)
     {
-        if (peer.RealizedObjects.Contains(realizedObject.abstractPhysicalObject.ID.number)) {
+        int id = realizedObject.ID();
+        if (peer.RealizedObjects.Contains(id)) {
             return;
         }
 
-        peer.RealizedObjects.Add(realizedObject.abstractPhysicalObject.ID.number);
+        peer.RealizedObjects.Add(id);
 
-        int id = realizedObject.abstractPhysicalObject.ID.number;
         if (realizedObject is Player p) {
             SharedPlayerData data = p.Data() ?? new();
             peer.NetPeer.Send(data.ToPacket(id, p.abstractCreature.pos.room));

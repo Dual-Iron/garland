@@ -23,7 +23,7 @@ partial class Main
     private void AbstractCreature_Die(On.AbstractCreature.orig_Die orig, AbstractCreature self)
     {
         if (self.state.alive) {
-            server.Broadcast(new KillCreature(self.ID.number));
+            self.BroadcastRelevant(new KillCreature(self.ID()));
         }
         orig(self);
     }
@@ -33,7 +33,7 @@ partial class Main
         // Check for input before players update
         while (Input.Queue.Dequeue(out var sender, out var packet)) {
             if (self.game.Session().GetPlayer(sender) is AbstractCreature player) {
-                self.game.Session().LastInput[player.ID.number] = packet; 
+                self.game.Session().LastInput[player.ID()] = packet; 
             }
         }
         orig(self);
@@ -57,9 +57,8 @@ partial class Main
     {
         orig(p, eu);
 
-        var sess = p.Session();
         UpdatePlayer update = new() {
-            ID = p.abstractPhysicalObject.ID.number,
+            ID = p.ID(),
             Standing = p.standing,
             BodyMode = (byte)p.bodyMode,
             Animation = (byte)p.animation,
@@ -89,6 +88,6 @@ partial class Main
             InputBitmask8 = p.input[8].ToPacket().Bitmask,
             InputBitmask9 = p.input[9].ToPacket().Bitmask,
         };
-        sess.SendObjectUpdate(p, update);
+        p.BroadcastRelevant(update, LiteNetLib.DeliveryMethod.ReliableSequenced);
     }
 }
