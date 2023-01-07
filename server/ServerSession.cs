@@ -92,11 +92,11 @@ sealed class ServerSession : GameSession
             RunSpeed = 1 + sSpeed - sFat * 0.5f,
             PoleClimbSpeed = 1 + sSpeed * 1.5f - sFat * 0.5f,
             CorridorClimbSpeed = 1 + sSpeed - sFat * 0.5f,
-            Weight = 1 + sFat,
+            Weight = 1 + sFat - sCharm * 0.8f,
             VisBonus = sSpeed - sCharm,
             SneakStealth = 0.5f + sCharm,
             Loudness = 1 + sFat * 2 - sCharm,
-            LungWeakness = 1 - sSpeed * 2,
+            LungWeakness = 1 + sCharm * 1.2f,
             Ill = false,
 
             Glows = false,
