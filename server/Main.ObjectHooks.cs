@@ -19,7 +19,8 @@ partial class Main
         // Sync client players
         On.Player.Update += Player_Update;
 
-        // Fix playerNumber-related crash
+        // Player related fixes
+        On.Player.MovementUpdate += Player_MovementUpdate;
         On.Player.ctor += Player_ctor;
         On.Player.checkInput += Player_checkInput;
     }
@@ -95,6 +96,19 @@ partial class Main
             InputBitmask9 = p.input[9].ToPacket().Bitmask,
         };
         p.BroadcastRelevant(update, LiteNetLib.DeliveryMethod.ReliableSequenced);
+    }
+
+    private void Player_MovementUpdate(On.Player.orig_MovementUpdate orig, Player self, bool eu)
+    {
+        orig(self, eu);
+
+        if (self.bodyChunkConnections[0].distance == 17 && self.Data() is SharedPlayerData data) {
+            float tallModifier = data.Fat * 2;
+            float cuteModifier = data.Charm * (data.Charm < 0 ? 2 : 6);
+
+            // Smaller -> cute and slower
+            self.bodyChunkConnections[0].distance += tallModifier - cuteModifier;
+        }
     }
 
     private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature p, World world)

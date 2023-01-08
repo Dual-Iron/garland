@@ -20,6 +20,7 @@ partial class Main
         On.Player.CanEatMeat += Player_CanEatMeat;
 
         // Set player graphics and The Mark
+        On.Player.MovementUpdate += Player_MovementUpdate;
         On.PlayerGraphics.ctor += PlayerGraphics_ctor;
         On.PlayerGraphics.Update += PlayerGraphics_Update;
         On.PlayerGraphics.DrawSprites += PlayerGraphics_DrawSprites;
@@ -122,6 +123,20 @@ partial class Main
     private bool Player_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
     {
         return orig(self, crit) || self.Data()?.EatsMeat == true;
+    }
+
+    // Player graphics and stuff
+    private void Player_MovementUpdate(On.Player.orig_MovementUpdate orig, Player self, bool eu)
+    {
+        orig(self, eu);
+
+        if (self.bodyChunkConnections[0].distance == 17 && self.Data() is SharedPlayerData data) {
+            float tallModifier = data.Fat * 2;
+            float cuteModifier = data.Charm * (data.Charm < 0 ? 2 : 6);
+
+            // Smaller -> cute and slower
+            self.bodyChunkConnections[0].distance += tallModifier - cuteModifier;
+        }
     }
 
     private void PlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self, PhysicalObject ow)
