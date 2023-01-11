@@ -1,4 +1,6 @@
 ﻿using Common;
+using System.Linq;
+using static Creature.Grasp.Shareability;
 
 namespace Client;
 
@@ -13,13 +15,24 @@ sealed class ClientRoomLogic
         this.session = session;
     }
 
-    public void Update()
+    bool TryFind<T>(int id, out T obj) where T : PhysicalObject
+    {
+        if (session.Objects.TryGetValue(id, out var something) && something is T t) {
+            obj = t;
+            return true;
+        }
+        obj = null!;
+        return false;
+    }
+
+    public void UpdatePreRoom()
     {
         // Follow our own player
         game.cameras[0].followAbstractCreature = session.MyPlayer;
 
-        if (session.MyPlayer?.Room.realizedRoom != null && game.cameras[0].room != session.MyPlayer.Room.realizedRoom) {
-            game.cameras[0].MoveCamera(session.MyPlayer.Room.realizedRoom, 0);
+        var room = session.MyPlayer?.Room.realizedRoom;
+        if (room != null && game.cameras[0].room != room) {
+            game.cameras[0].MoveCamera(room, 0);
         }
 
         foreach (var packet in RealizeRoom.All()) {
@@ -31,7 +44,7 @@ sealed class ClientRoomLogic
         }
 
         foreach (var packet in DestroyObject.All()) {
-            if (session.Objects.TryGetValue(packet.ID, out var obj) && !obj.slatedForDeletetion) {
+            if (TryFind(packet.ID, out PhysicalObject obj) && !obj.slatedForDeletetion) {
                 Main.Log.LogDebug($"Server destroyed {obj.DebugName()}");
 
                 obj.abstractPhysicalObject.Destroy();
@@ -40,10 +53,6 @@ sealed class ClientRoomLogic
             }
         }
 
-        IntroduceStuff();
-
-        UpdateStuff();
-
         foreach (var packet in KillCreature.All()) {
             if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Creature crit) {
                 Main.Log.LogDebug($"Server killed {obj.DebugName()}");
@@ -51,9 +60,44 @@ sealed class ClientRoomLogic
                 crit.Die();
             }
         }
+
+        IntroduceObjects();
+
+        UpdateObjects();
     }
 
-    private void IntroduceStuff()
+    public void UpdatePostRoom()
+    {
+        // Update some things after object updates, to give the client a chance to run sfx/vfx and stuff.
+        // These are mostly "corrective" packets that ensure the client's world is up-to-date with the server.
+        foreach (var packet in Grab.All()) {
+            if (TryFind(packet.GrabberID, out Creature grabber) && grabber.grasps != null && packet.GraspUsed < grabber.grasps.Length && TryFind(packet.GrabbedID, out PhysicalObject grabbed)) {
+                grabber.ReleaseGrasp(packet.GraspUsed);
+
+                var share = packet.NonExclusive
+                    ? NonExclusive
+                    : packet.ShareWithNonExclusive
+                        ? CanOnlyShareWithNonExclusive
+                        : CanNotShare;
+
+                grabber.Grab(grabbed, packet.GraspUsed, packet.GrabbedChunk, share, packet.Dominance, packet.OverrideEquallyDominant, packet.Pacifying);
+            }
+        }
+
+        foreach (var packet in Release.All()) {
+            if (TryFind(packet.GrabberID, out Creature grabber) && grabber.grasps != null && packet.GraspUsed < grabber.grasps.Length && TryFind(packet.GrabbedID, out PhysicalObject grabbed)) {
+                // If grabbing the object, but in a desynced grasp, then switch grasps.
+                var serverGrasp = grabber.grasps[packet.GraspUsed];
+                var clientGrasp = grabber.grasps.FirstOrDefault(g => g?.grabbed == grabbed);
+                if (serverGrasp?.grabbed != grabbed && clientGrasp != null) {
+                    grabber.SwitchGrasps(packet.GraspUsed, clientGrasp.graspUsed);
+                }
+                grabber.ReleaseGrasp(packet.GraspUsed);
+            }
+        }
+    }
+
+    private void IntroduceObjects()
     {
         foreach (var packet in IntroPlayer.All()) {
             // Set this before realizing player (so slugcatStats is not null)
@@ -73,11 +117,11 @@ sealed class ClientRoomLogic
         }
     }
 
-    private void UpdateStuff()
+    private void UpdateObjects()
     {
         session.UpdatePlayer.Clear();
         foreach (var packet in UpdatePlayer.All()) {
-            if (session.Objects.TryGetValue(packet.ID, out var obj) && obj is Player) {
+            if (TryFind(packet.ID, out Player _)) {
                 session.PlayerLastInput[packet.ID] = new(packet.InputDir0, packet.InputBitmask0);
                 session.UpdatePlayer[packet.ID] = packet;
             }

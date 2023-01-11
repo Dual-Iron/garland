@@ -2,6 +2,7 @@
 using LiteNetLib;
 using System.Collections.Generic;
 using System.Linq;
+using static Creature.Grasp.Shareability;
 
 namespace Server;
 
@@ -239,6 +240,20 @@ sealed class ServerRoomLogic
         if (realizedObject is Player p) {
             SharedPlayerData data = p.Data() ?? new();
             peer.NetPeer.Send(data.ToPacket(id, p.abstractCreature.pos.room));
+        }
+
+        if (realizedObject is Creature crit && crit.grasps != null) {
+            foreach (var grasp in crit.grasps) {
+                if (grasp?.grabbed == null) {
+                    continue;
+                }
+
+                Introduce(peer, grasp.grabbed);
+
+                byte bitmask = Grab.ToBitmask(grasp.shareability == NonExclusive, grasp.shareability == CanOnlyShareWithNonExclusive, true, grasp.pacifying);
+
+                peer.NetPeer.Send(new Grab(grasp.grabbed.ID(), crit.ID(), grasp.dominance, (byte)grasp.graspUsed, (byte)grasp.chunkGrabbed, bitmask));
+            }
         }
     }
 }

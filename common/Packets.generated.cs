@@ -31,20 +31,15 @@ public enum PacketKind : ushort
     SyncShortcut = 0x208,
     /// <summary>Makes a creature grab an object.</summary>
     Grab = 0x209,
-    /// <summary>Makes a creature throw an object. Object-specific code may be run as needed. For instance, spears thrown by players set spearDamageBonus, and weapons call ChangeMode.</summary>
-    ThrowObject = 0x20A,
-    /// <summary>Makes a weapon hit an object, as in Weapon::HitSomething.</summary>
-    HitObject = 0x20B,
-    /// <summary>Makes a weapon hit a wall, as in Weapon::HitWall(). Makes spears stick in walls if Stick = true.</summary>
-    HitWall = 0x20C,
-    /// <summary>Syncs an object's rotation. Used after Weapon::SetRandomSpin() is called.</summary>
-    SyncRotation = 0x20D,
-    /// <summary>Syncs and object's position.</summary>
-    SyncPosition = 0x20E,
+    /// <summary>Makes a creature release an object.</summary>
+    Release = 0x20A,
     /// <summary>Introduces a player to a client.</summary>
     IntroPlayer = 0x250,
-    /// <summary>Updates a plyaer for a client.</summary>
+    /// <summary>Updates a player for a client.</summary>
     UpdatePlayer = 0x251,
+    IntroFly = 0x252,
+    /// <summary>TODO!!</summary>
+    UpdateFly = 0x253,
 
 }
 
@@ -67,13 +62,11 @@ public static partial class Packets
                 case 0x207: KillCreature.Queue.Enqueue(sender, data.Read<KillCreature>()); break;
                 case 0x208: SyncShortcut.Queue.Enqueue(sender, data.Read<SyncShortcut>()); break;
                 case 0x209: Grab.Queue.Enqueue(sender, data.Read<Grab>()); break;
-                case 0x20A: ThrowObject.Queue.Enqueue(sender, data.Read<ThrowObject>()); break;
-                case 0x20B: HitObject.Queue.Enqueue(sender, data.Read<HitObject>()); break;
-                case 0x20C: HitWall.Queue.Enqueue(sender, data.Read<HitWall>()); break;
-                case 0x20D: SyncRotation.Queue.Enqueue(sender, data.Read<SyncRotation>()); break;
-                case 0x20E: SyncPosition.Queue.Enqueue(sender, data.Read<SyncPosition>()); break;
+                case 0x20A: Release.Queue.Enqueue(sender, data.Read<Release>()); break;
                 case 0x250: IntroPlayer.Queue.Enqueue(sender, data.Read<IntroPlayer>()); break;
                 case 0x251: UpdatePlayer.Queue.Enqueue(sender, data.Read<UpdatePlayer>()); break;
+                case 0x252: IntroFly.Queue.Enqueue(sender, data.Read<IntroFly>()); break;
+                case 0x253: UpdateFly.Queue.Enqueue(sender, data.Read<UpdateFly>()); break;
 
                 default: error($"Invalid packet type: 0x{type:X}"); break;
             }
@@ -316,7 +309,7 @@ public record struct SyncShortcut(int CreatureID, int Room, int EntranceNode, in
     }
 }
 /// <summary>Makes a creature grab an object.</summary>
-public record struct Grab(int GrabbedID, int GrabbedChunk, int GrabberID, int GraspUsed, float Dominance, byte Bitmask) : IPacket
+public record struct Grab(int GrabbedID, int GrabberID, float Dominance, byte GraspUsed, byte GrabbedChunk, byte Bitmask) : IPacket
 {
     public static PacketQueue<Grab> Queue { get; } = new();
     public static bool Latest(out Grab packet) => Queue.Latest(out _, out packet);
@@ -325,20 +318,20 @@ public record struct Grab(int GrabbedID, int GrabbedChunk, int GrabberID, int Gr
     public void Deserialize(NetDataReader reader)
     {
         GrabbedID = reader.GetInt();
-        GrabbedChunk = reader.GetInt();
         GrabberID = reader.GetInt();
-        GraspUsed = reader.GetInt();
         Dominance = reader.GetFloat();
+        GraspUsed = reader.GetByte();
+        GrabbedChunk = reader.GetByte();
         Bitmask = reader.GetByte();
 
     }
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(GrabbedID);
-        writer.Put(GrabbedChunk);
         writer.Put(GrabberID);
-        writer.Put(GraspUsed);
         writer.Put(Dominance);
+        writer.Put(GraspUsed);
+        writer.Put(GrabbedChunk);
         writer.Put(Bitmask);
 
     }
@@ -352,133 +345,25 @@ public record struct Grab(int GrabbedID, int GrabbedChunk, int GrabberID, int Gr
     public bool Pacifying => (Bitmask & 0x8) != 0;
 
 }
-/// <summary>Makes a creature throw an object. Object-specific code may be run as needed. For instance, spears thrown by players set spearDamageBonus, and weapons call ChangeMode.</summary>
-public record struct ThrowObject(int ID, int Thrower, int ThrowerGrasp, Vector2 Pos, Vector2 Vel) : IPacket
+/// <summary>Makes a creature release an object.</summary>
+public record struct Release(int GrabbedID, int GrabberID, byte GraspUsed) : IPacket
 {
-    public static PacketQueue<ThrowObject> Queue { get; } = new();
-    public static bool Latest(out ThrowObject packet) => Queue.Latest(out _, out packet);
-    public static IEnumerable<ThrowObject> All() => Queue.Drain();
-    public PacketKind GetKind() => PacketKind.ThrowObject;
+    public static PacketQueue<Release> Queue { get; } = new();
+    public static bool Latest(out Release packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<Release> All() => Queue.Drain();
+    public PacketKind GetKind() => PacketKind.Release;
     public void Deserialize(NetDataReader reader)
     {
-        ID = reader.GetInt();
-        Thrower = reader.GetInt();
-        ThrowerGrasp = reader.GetInt();
-        Pos = reader.GetVec();
-        Vel = reader.GetVec();
+        GrabbedID = reader.GetInt();
+        GrabberID = reader.GetInt();
+        GraspUsed = reader.GetByte();
 
     }
     public void Serialize(NetDataWriter writer)
     {
-        writer.Put(ID);
-        writer.Put(Thrower);
-        writer.Put(ThrowerGrasp);
-        writer.Put(Pos);
-        writer.Put(Vel);
-
-    }
-}
-/// <summary>Makes a weapon hit an object, as in Weapon::HitSomething.</summary>
-public record struct HitObject(int ProjectileID, Vector2 ProjectilePos, Vector2 ProjectileVel, int ObjectID, byte Chunk, byte Appendage, byte AppendageSeg, float AppendageSegDistance, Vector2 CollisionPos) : IPacket
-{
-    public static PacketQueue<HitObject> Queue { get; } = new();
-    public static bool Latest(out HitObject packet) => Queue.Latest(out _, out packet);
-    public static IEnumerable<HitObject> All() => Queue.Drain();
-    public PacketKind GetKind() => PacketKind.HitObject;
-    public void Deserialize(NetDataReader reader)
-    {
-        ProjectileID = reader.GetInt();
-        ProjectilePos = reader.GetVec();
-        ProjectileVel = reader.GetVec();
-        ObjectID = reader.GetInt();
-        Chunk = reader.GetByte();
-        Appendage = reader.GetByte();
-        AppendageSeg = reader.GetByte();
-        AppendageSegDistance = reader.GetFloat();
-        CollisionPos = reader.GetVec();
-
-    }
-    public void Serialize(NetDataWriter writer)
-    {
-        writer.Put(ProjectileID);
-        writer.Put(ProjectilePos);
-        writer.Put(ProjectileVel);
-        writer.Put(ObjectID);
-        writer.Put(Chunk);
-        writer.Put(Appendage);
-        writer.Put(AppendageSeg);
-        writer.Put(AppendageSegDistance);
-        writer.Put(CollisionPos);
-
-    }
-}
-/// <summary>Makes a weapon hit a wall, as in Weapon::HitWall(). Makes spears stick in walls if Stick = true.</summary>
-public record struct HitWall(int ProjectileID, Vector2 ProjectilePos, Vector2 ProjectileVel, bool Stick) : IPacket
-{
-    public static PacketQueue<HitWall> Queue { get; } = new();
-    public static bool Latest(out HitWall packet) => Queue.Latest(out _, out packet);
-    public static IEnumerable<HitWall> All() => Queue.Drain();
-    public PacketKind GetKind() => PacketKind.HitWall;
-    public void Deserialize(NetDataReader reader)
-    {
-        ProjectileID = reader.GetInt();
-        ProjectilePos = reader.GetVec();
-        ProjectileVel = reader.GetVec();
-        Stick = reader.GetBool();
-
-    }
-    public void Serialize(NetDataWriter writer)
-    {
-        writer.Put(ProjectileID);
-        writer.Put(ProjectilePos);
-        writer.Put(ProjectileVel);
-        writer.Put(Stick);
-
-    }
-}
-/// <summary>Syncs an object's rotation. Used after Weapon::SetRandomSpin() is called.</summary>
-public record struct SyncRotation(int ID, float Rot, float RotSpeed) : IPacket
-{
-    public static PacketQueue<SyncRotation> Queue { get; } = new();
-    public static bool Latest(out SyncRotation packet) => Queue.Latest(out _, out packet);
-    public static IEnumerable<SyncRotation> All() => Queue.Drain();
-    public PacketKind GetKind() => PacketKind.SyncRotation;
-    public void Deserialize(NetDataReader reader)
-    {
-        ID = reader.GetInt();
-        Rot = reader.GetFloat();
-        RotSpeed = reader.GetFloat();
-
-    }
-    public void Serialize(NetDataWriter writer)
-    {
-        writer.Put(ID);
-        writer.Put(Rot);
-        writer.Put(RotSpeed);
-
-    }
-}
-/// <summary>Syncs and object's position.</summary>
-public record struct SyncPosition(int ID, byte Chunk, Vector2 Pos, Vector2 PosLast) : IPacket
-{
-    public static PacketQueue<SyncPosition> Queue { get; } = new();
-    public static bool Latest(out SyncPosition packet) => Queue.Latest(out _, out packet);
-    public static IEnumerable<SyncPosition> All() => Queue.Drain();
-    public PacketKind GetKind() => PacketKind.SyncPosition;
-    public void Deserialize(NetDataReader reader)
-    {
-        ID = reader.GetInt();
-        Chunk = reader.GetByte();
-        Pos = reader.GetVec();
-        PosLast = reader.GetVec();
-
-    }
-    public void Serialize(NetDataWriter writer)
-    {
-        writer.Put(ID);
-        writer.Put(Chunk);
-        writer.Put(Pos);
-        writer.Put(PosLast);
+        writer.Put(GrabbedID);
+        writer.Put(GrabberID);
+        writer.Put(GraspUsed);
 
     }
 }
@@ -551,7 +436,7 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
     public bool HasMark => (Bitmask & 0x8) != 0;
 
 }
-/// <summary>Updates a plyaer for a client.</summary>
+/// <summary>Updates a player for a client.</summary>
 public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Animation, byte AnimationFrame, sbyte FlipDirection, sbyte FlipDirectionLast, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir0, Vector2 InputDir1, Vector2 InputDir2, Vector2 InputDir3, Vector2 InputDir4, Vector2 InputDir5, Vector2 InputDir6, Vector2 InputDir7, Vector2 InputDir8, Vector2 InputDir9, byte InputBitmask0, byte InputBitmask1, byte InputBitmask2, byte InputBitmask3, byte InputBitmask4, byte InputBitmask5, byte InputBitmask6, byte InputBitmask7, byte InputBitmask8, byte InputBitmask9) : IPacket
 {
     public static PacketQueue<UpdatePlayer> Queue { get; } = new();
@@ -626,6 +511,43 @@ public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Ani
         writer.Put(InputBitmask7);
         writer.Put(InputBitmask8);
         writer.Put(InputBitmask9);
+
+    }
+}
+public record struct IntroFly(int ID, int Room) : IPacket
+{
+    public static PacketQueue<IntroFly> Queue { get; } = new();
+    public static bool Latest(out IntroFly packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<IntroFly> All() => Queue.Drain();
+    public PacketKind GetKind() => PacketKind.IntroFly;
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+        Room = reader.GetInt();
+
+    }
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
+        writer.Put(Room);
+
+    }
+}
+/// <summary>TODO!!</summary>
+public record struct UpdateFly(int ID) : IPacket
+{
+    public static PacketQueue<UpdateFly> Queue { get; } = new();
+    public static bool Latest(out UpdateFly packet) => Queue.Latest(out _, out packet);
+    public static IEnumerable<UpdateFly> All() => Queue.Drain();
+    public PacketKind GetKind() => PacketKind.UpdateFly;
+    public void Deserialize(NetDataReader reader)
+    {
+        ID = reader.GetInt();
+
+    }
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ID);
 
     }
 }

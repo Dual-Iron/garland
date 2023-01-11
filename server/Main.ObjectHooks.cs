@@ -1,4 +1,5 @@
 ﻿using Common;
+using static Creature.Grasp.Shareability;
 
 namespace Server;
 
@@ -8,6 +9,10 @@ partial class Main
     {
         // Sync creature deaths
         On.AbstractCreature.Die += AbstractCreature_Die;
+
+        // Sync creature grasps
+        On.Creature.Grab += Creature_Grab;
+        On.Creature.Grasp.Release += Grasp_Release;
 
         // Check for player input packets and use them
         On.Room.Update += Room_Update;
@@ -30,6 +35,27 @@ partial class Main
         if (self.state.alive) {
             self.BroadcastRelevant(new KillCreature(self.ID()));
         }
+        orig(self);
+    }
+
+    private bool Creature_Grab(On.Creature.orig_Grab orig, Creature self, PhysicalObject obj, int graspUsed, int chunkGrabbed, Creature.Grasp.Shareability shareability, float dominance, bool overrideEquallyDominant, bool pacifying)
+    {
+        if (orig(self, obj, graspUsed, chunkGrabbed, shareability, dominance, overrideEquallyDominant, pacifying)) {
+            byte bitmask = Grab.ToBitmask(shareability == NonExclusive, shareability == CanOnlyShareWithNonExclusive, overrideEquallyDominant, pacifying);
+
+            self.BroadcastRelevant(new Grab(obj.ID(), self.ID(), dominance, (byte)graspUsed, (byte)chunkGrabbed, bitmask));
+
+            return true;
+        }
+        return false;
+    }
+
+    private void Grasp_Release(On.Creature.Grasp.orig_Release orig, Creature.Grasp self)
+    {
+        if (!self.discontinued) {
+            self.grabber.BroadcastRelevant(new Release(self.grabbed.ID(), self.grabber.ID(), (byte)self.graspUsed));
+        }
+
         orig(self);
     }
 

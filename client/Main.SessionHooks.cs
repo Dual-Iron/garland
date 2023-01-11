@@ -38,7 +38,8 @@ partial class Main
         On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.World.ctor += World_ctor;
         On.HUD.HUD.InitSinglePlayerHud += HUD_InitSinglePlayerHud;
-        IL.RainWorldGame.Update += FixPauseAndCrash; // Custom pause menu logic
+        IL.RainWorldGame.Update += FixPauseAndCrash; // Custom pause menu logic + update ClientRoomLogic
+        On.RainWorldGame.Update += UpdateClientRoomLogic;
         IL.RainWorldGame.GrafUpdate += FixPause; // Custom pause menu logic
 
         // Decentralize RoomCamera.followAbstractCreature
@@ -198,7 +199,7 @@ partial class Main
         static RainWorldGame RoomRealizerHook(RainWorldGame game)
         {
             if (game.session is ClientSession session) {
-                session.RoomRealizer.Update();
+                session.RoomRealizer.UpdatePreRoom();
             }
             return game;
         }
@@ -211,6 +212,15 @@ partial class Main
         static bool UpdateRoomsForStorySession(bool orig, RainWorldGame game)
         {
             return orig || game.session is ClientSession;
+        }
+    }
+
+    private void UpdateClientRoomLogic(On.RainWorldGame.orig_Update orig, RainWorldGame self)
+    {
+        orig(self);
+
+        if (self.session is ClientSession sess) {
+            sess.RoomRealizer.UpdatePostRoom();
         }
     }
 
