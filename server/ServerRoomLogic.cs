@@ -237,12 +237,13 @@ sealed class ServerRoomLogic
 
         peer.RealizedObjects.Add(id);
 
-        if (realizedObject is Player p) {
-            SharedPlayerData data = p.Data() ?? new();
-            peer.NetPeer.Send(data.ToPacket(id, p.abstractCreature.pos.room));
+        if (realizedObject is not Creature crit) {
+            return;
         }
 
-        if (realizedObject is Creature crit && crit.grasps != null) {
+        IntroduceSpecific(peer, id, crit);
+
+        if (crit.grasps != null) {
             foreach (var grasp in crit.grasps) {
                 if (grasp?.grabbed == null) {
                     continue;
@@ -254,6 +255,18 @@ sealed class ServerRoomLogic
 
                 peer.NetPeer.Send(new Grab(grasp.grabbed.ID(), crit.ID(), grasp.dominance, (byte)grasp.graspUsed, (byte)grasp.chunkGrabbed, bitmask));
             }
+        }
+
+        if (crit.dead) {
+            peer.NetPeer.Send(new KillCreature(crit.ID()));
+        }
+    }
+
+    private static void IntroduceSpecific(TrackedPeer peer, int id, Creature crit)
+    {
+        if (crit is Player p) {
+            SharedPlayerData data = p.Data() ?? new();
+            peer.NetPeer.Send(data.ToPacket(id, p.abstractCreature.pos.room));
         }
     }
 }

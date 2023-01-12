@@ -60,19 +60,17 @@ sealed class ServerSession : GameSession
         if (eyeColor.b == 0)
             eyeColor.b = 1; // prevent pureblack
 
-        float fat = Lerp(-1, +1, Rng.value) * Rng.value;
-        float speed = Lerp(-1, +1, Rng.value) * Rng.value;
-        float charm = Lerp(-1, +1, Rng.value) * Rng.value;
-
-        // For stats
-        float sFat = fat * 0.15f;
-        float sSpeed = speed * 0.08f;
-        float sCharm = charm * 0.15f;
+        float fat = Pow(Lerp(-1, +1, Rng.value), 2);
+        float speed = Pow(Lerp(-1, +1, Rng.value), 2);
+        float charm = Pow(Lerp(-1, +1, Rng.value), 2);
 
         Rng.seed = seed;
 
-        int foodSleep = 4 + (int)(speed * 2.4f + fat * 1.2f);
-        int foodMax = Max(7 + (int)(fat * 3.6f), foodSleep + 1);
+        int foodSleep = Max(2,       4 + (int)(speed * 2.4f + fat * 1.4f));
+        int foodMax = Max(foodSleep, 7 + (int)(fat * 4.5f));
+
+        if (foodSleep < 2) foodSleep = 2;
+        if (foodMax < foodSleep) foodMax = foodSleep;
 
         static string Fmt(float stat) => stat > 0 ? $"+{RoundToInt(stat * 100)}%" : $"{RoundToInt(stat * 100)}%";
         static string FmtColor(Color32 color) => $"0x{color.r:X}{color.g:X}{color.b:X}";
@@ -89,14 +87,14 @@ sealed class ServerSession : GameSession
 
             FoodMax = (byte)foodMax,
             FoodSleep = (byte)foodSleep,
-            RunSpeed = 1 + sSpeed - sFat * 0.5f,
-            PoleClimbSpeed = 1 + sSpeed * 1.5f - sFat * 0.5f,
-            CorridorClimbSpeed = 1 + sSpeed - sFat * 0.5f,
-            Weight = 1 + sFat - sCharm * 0.8f,
-            VisBonus = -sCharm,
-            SneakStealth = 0.5f + sCharm - sSpeed,
-            Loudness = 1 + sFat * 2 - sCharm,
-            LungWeakness = 1 + sCharm * 1.2f,
+            RunSpeed = 1 + speed * 0.12f - fat * 0.10f,
+            PoleClimbSpeed = 1 + speed * 0.13f - fat * 0.10f,
+            CorridorClimbSpeed = 1 + speed * 0.10f - fat * 0.10f,
+            Weight = 1 + fat * 0.15f - charm * 0.12f,
+            VisBonus = -charm * 0.15f,
+            SneakStealth = 0.5f + charm * 0.15f - speed * 0.08f,
+            Loudness = 1 + fat * 0.30f - charm * 0.15f,
+            LungWeakness = 1 + charm * 0.18f,
             Ill = false,
 
             Glows = false,

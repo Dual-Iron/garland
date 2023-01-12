@@ -15,7 +15,7 @@ sealed class ClientRoomLogic
         this.session = session;
     }
 
-    bool TryFind<T>(int id, out T obj) where T : PhysicalObject
+    public bool TryFind<T>(int id, out T obj) where T : PhysicalObject
     {
         if (session.Objects.TryGetValue(id, out var something) && something is T t) {
             obj = t;
@@ -67,6 +67,17 @@ sealed class ClientRoomLogic
     }
 
     public void UpdatePostRoom()
+    {
+        try {
+            Main.GrabPacket = true;
+            DoUpdatePostRoom();
+        }
+        finally {
+            Main.GrabPacket = false;
+        }
+    }
+
+    private void DoUpdatePostRoom()
     {
         // Update some things after object updates, to give the client a chance to run sfx/vfx and stuff.
         // These are mostly "corrective" packets that ensure the client's world is up-to-date with the server.

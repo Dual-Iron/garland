@@ -8,9 +8,9 @@ partial class Main
     private void ObjectHooks()
     {
         // Sync creature deaths
-        On.AbstractCreature.Die += AbstractCreature_Die;
+        On.Creature.Die += Creature_Die;
 
-        // Sync creature grasps
+        // Sync creature grasps, also player grabs
         On.Creature.Grab += Creature_Grab;
         On.Creature.Grasp.Release += Grasp_Release;
 
@@ -24,15 +24,16 @@ partial class Main
         // Sync client players
         On.Player.Update += Player_Update;
 
-        // Player related fixes
+        // Player related fixes (player grabs, player height, array accesses).
+        On.Player.Grabability += Player_Grabability;
         On.Player.MovementUpdate += Player_MovementUpdate;
         On.Player.ctor += Player_ctor;
         On.Player.checkInput += Player_checkInput;
     }
 
-    private void AbstractCreature_Die(On.AbstractCreature.orig_Die orig, AbstractCreature self)
+    private void Creature_Die(On.Creature.orig_Die orig, Creature self)
     {
-        if (self.state.alive) {
+        if (!self.dead) {
             self.BroadcastRelevant(new KillCreature(self.ID()));
         }
         orig(self);
@@ -40,6 +41,10 @@ partial class Main
 
     private bool Creature_Grab(On.Creature.orig_Grab orig, Creature self, PhysicalObject obj, int graspUsed, int chunkGrabbed, Creature.Grasp.Shareability shareability, float dominance, bool overrideEquallyDominant, bool pacifying)
     {
+        if (self is Player && obj is Player p) {
+            pacifying = p.Stunned;
+        }
+
         if (orig(self, obj, graspUsed, chunkGrabbed, shareability, dominance, overrideEquallyDominant, pacifying)) {
             byte bitmask = Grab.ToBitmask(shareability == NonExclusive, shareability == CanOnlyShareWithNonExclusive, overrideEquallyDominant, pacifying);
 
@@ -124,15 +129,24 @@ partial class Main
         p.BroadcastRelevant(update, LiteNetLib.DeliveryMethod.ReliableSequenced);
     }
 
+    private int Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
+    {
+        if (self != obj && obj is Player) {
+            return (int)Player.ObjectGrabability.BigOneHand;
+        }
+        return orig(self, obj);
+    }
+
     private void Player_MovementUpdate(On.Player.orig_MovementUpdate orig, Player self, bool eu)
     {
         orig(self, eu);
 
         if (self.bodyChunkConnections[0].distance == 17 && self.Data() is SharedPlayerData data) {
-            float tallModifier = data.Fat * 2;
+            float tallModifier = data.Fat * 4;
             float cuteModifier = data.Charm * (data.Charm < 0 ? 2 : 6);
 
-            // Smaller -> cute and slower
+            // Fat makes you shorter or taller all the same.
+            // Charm makes you significantly shorter, or slightly taller.
             self.bodyChunkConnections[0].distance += tallModifier - cuteModifier;
         }
     }

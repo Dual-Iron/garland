@@ -8,6 +8,11 @@ partial class Main
 {
     private void ObjectHooks()
     {
+        // Fix player grabs
+        On.Creature.Grab += Creature_Grab;
+        On.Creature.ReleaseGrasp += Creature_ReleaseGrasp;
+        On.Player.Grabability += Player_Grabability;
+
         // Set chunk positions etc. Pre- and post-update stuff.
         On.RainWorldGame.Update += UpdateState;
 
@@ -29,6 +34,25 @@ partial class Main
         On.MiniFly.ViableForBuzzaround += MiniFly_ViableForBuzzaround;
     }
 
+    public static bool GrabPacket = false;
+    private bool Creature_Grab(On.Creature.orig_Grab orig, Creature self, PhysicalObject obj, int graspUsed, int chunkGrabbed, Creature.Grasp.Shareability shareability, float dominance, bool overrideEquallyDominant, bool pacifying)
+    {
+        if (!GrabPacket) return false;
+        return orig(self, obj, graspUsed, chunkGrabbed, shareability, dominance, overrideEquallyDominant, pacifying);
+    }
+    private void Creature_ReleaseGrasp(On.Creature.orig_ReleaseGrasp orig, Creature self, int grasp)
+    {
+        if (GrabPacket) orig(self, grasp);
+    }
+
+    private int Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
+    {
+        if (self != obj && obj is Player) {
+            return (int)Player.ObjectGrabability.BigOneHand;
+        }
+        return orig(self, obj);
+    }
+
     private void UpdateState(On.RainWorldGame.orig_Update orig, RainWorldGame self)
     {
         orig(self);
@@ -36,21 +60,23 @@ partial class Main
         if (self.session is not ClientSession sess) return;
 
         foreach (var kvp in sess.UpdatePlayer) {
-            if (sess.Objects.TryGetValue(kvp.Key, out var obj) && obj is Player p) {
-                var packet = kvp.Value;
-
-                p.firstChunk.pos = Vector2.Lerp(p.firstChunk.pos, packet.HeadPos, 0.8f);
-                p.firstChunk.vel = packet.HeadVel;
-                p.bodyChunks[1].pos = Vector2.Lerp(p.bodyChunks[1].pos, packet.ButtPos, 0.8f);
-                p.bodyChunks[1].vel = packet.ButtVel;
-
-                p.standing = packet.Standing;
-                p.bodyMode = (Player.BodyModeIndex)packet.BodyMode;
-                p.animation = (Player.AnimationIndex)packet.Animation;
-                p.animationFrame = packet.AnimationFrame;
-                p.flipDirection = packet.FlipDirection;
-                p.lastFlipDirection = packet.FlipDirectionLast;
+            if (!sess.RoomRealizer.TryFind(kvp.Key, out Player p)) {
+                continue;
             }
+
+            var packet = kvp.Value;
+
+            p.firstChunk.pos = Vector2.Lerp(p.firstChunk.pos, packet.HeadPos, 0.8f);
+            p.firstChunk.vel = packet.HeadVel;
+            p.bodyChunks[1].pos = Vector2.Lerp(p.bodyChunks[1].pos, packet.ButtPos, 0.8f);
+            p.bodyChunks[1].vel = packet.ButtVel;
+
+            p.standing = packet.Standing;
+            p.bodyMode = (Player.BodyModeIndex)packet.BodyMode;
+            p.animation = (Player.AnimationIndex)packet.Animation;
+            p.animationFrame = packet.AnimationFrame;
+            p.flipDirection = packet.FlipDirection;
+            p.lastFlipDirection = packet.FlipDirectionLast;
         }
     }
 
@@ -131,10 +157,11 @@ partial class Main
         orig(self, eu);
 
         if (self.bodyChunkConnections[0].distance == 17 && self.Data() is SharedPlayerData data) {
-            float tallModifier = data.Fat * 2;
+            float tallModifier = data.Fat * 4;
             float cuteModifier = data.Charm * (data.Charm < 0 ? 2 : 6);
 
-            // Smaller -> cute and slower
+            // Fat makes you shorter or taller all the same.
+            // Charm makes you significantly shorter, or slightly taller.
             self.bodyChunkConnections[0].distance += tallModifier - cuteModifier;
         }
     }
@@ -168,7 +195,7 @@ partial class Main
         }
 
         // Saint eyes :)
-        if (data.Charm > 0.60f) {
+        if (data.Charm > 0.66f) {
             self.blink = 5;
         }
         // Twitch occasionally, for good measure. Only occurs at negative charm.
@@ -191,7 +218,7 @@ partial class Main
         sLeaser.sprites[1].scaleX += fat * 0.08f;
 
         float charm = self.player.Data()?.Charm ?? 0;
-        if (charm < -0.60f) {
+        if (charm < -0.66f) {
             // If they're really ugly, make them *really* ugly by scaling the face up slightly.
             if (sLeaser.sprites[9].scaleX is 1 or -1) sLeaser.sprites[9].scaleX -= charm * 0.1f;
             if (sLeaser.sprites[9].scaleY is 1 or -1) sLeaser.sprites[9].scaleY -= charm * 0.1f;
