@@ -1,0 +1,12 @@
+﻿{
+  "id": "garland-server",
+  "name": "Garland Server",
+  "version": "0.1.0",
+  "authors": "Dual",
+  "target_game_version": "v1.9",
+  "description": "The server-side mod for Garland",
+  "tags": [ "Game Modes" ],
+  "requirements": [],
+  "requirements_names": [],
+  "checksum_override_version": false
+}
