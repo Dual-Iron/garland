@@ -18,7 +18,7 @@ jobs:
     - name: Build solution
       run: dotnet publish Garland.sln -c Release -o output
     - name: Move output
-      run: mkdir -p artifacts/{client,server} && rsync client/assets/ artifacts/client && rsync server/assets/ artifacts/server && mkdir artifacts/client/plugins && mv output/Client.dll artifacts/client/plugins/Client.dll && mkdir artifacts/server/plugins && mv output/Server.dll artifacts/server/plugins/Server.dll
+      run: mkdir -p artifacts/{client,server} && mv client/assets/* artifacts/client && mv server/assets/* artifacts/server && mkdir artifacts/client/plugins && mv output/Client.dll artifacts/client/plugins/Client.dll && mkdir artifacts/server/plugins && mv output/Server.dll artifacts/server/plugins/Server.dll
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
