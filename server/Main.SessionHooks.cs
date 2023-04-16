@@ -41,9 +41,9 @@ partial class Main
 
     private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => Mathf.InverseLerp(0f, 2400f, self.TimeUntilRain);
 
-    private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, int playerChar)
+    private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, SlugcatStats.Name playerChar)
     {
-        orig(self, name, region, template, firstTemplate, ServerConfig.SlugcatWorld);
+        orig(self, name, region, template, firstTemplate, new(ServerConfig.SlugcatWorld));
     }
 
     private RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
@@ -53,7 +53,7 @@ partial class Main
 
     private void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
-        game.session = new ServerSession(ServerConfig.SlugcatWorld, game);
+        game.session = new ServerSession(new(ServerConfig.SlugcatWorld), game);
         game.startingRoom = ServerConfig.StartingRoom;
 
         orig(self, game);
@@ -74,7 +74,7 @@ partial class Main
         else
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
 
-        self.LoadWorld(startingRegion, ServerConfig.SlugcatWorld, false);
+        self.LoadWorld(startingRegion, new(ServerConfig.SlugcatWorld), false);
         self.FIRSTROOM = startingRoom;
     }
 

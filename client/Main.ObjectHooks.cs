@@ -45,10 +45,10 @@ partial class Main
         if (GrabPacket) orig(self, grasp);
     }
 
-    private int Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
+    private Player.ObjectGrabability Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
     {
         if (self != obj && obj is Player) {
-            return (int)Player.ObjectGrabability.BigOneHand;
+            return Player.ObjectGrabability.BigOneHand;
         }
         return orig(self, obj);
     }
@@ -72,8 +72,8 @@ partial class Main
             p.bodyChunks[1].vel = packet.ButtVel;
 
             p.standing = packet.Standing;
-            p.bodyMode = (Player.BodyModeIndex)packet.BodyMode;
-            p.animation = (Player.AnimationIndex)packet.Animation;
+            p.bodyMode = new(packet.BodyMode);
+            p.animation = new(packet.Animation);
             p.animationFrame = packet.AnimationFrame;
             p.flipDirection = packet.FlipDirection;
             p.lastFlipDirection = packet.FlipDirectionLast;
@@ -97,7 +97,7 @@ partial class Main
 
         // If this is us, then send our input off to the server!
         if (self.IsMyPlayer() && session.game.pauseMenu == null) {
-            var package = RWInput.PlayerInput(playerNumber: 0, self.room.game.rainWorld.options, self.room.game.setupValues);
+            var package = RWInput.PlayerInput(playerNumber: 0, self.room.game.rainWorld);
 
             ServerPeer?.Send(package.ToPacket(), LiteNetLib.DeliveryMethod.ReliableSequenced);
         }
@@ -121,29 +121,29 @@ partial class Main
 
         // Set input according to what server says.
         if (session.UpdatePlayer.TryGetValue(self.ID(), out var packet)) {
-            self.input[0] = new Common.Input(packet.InputDir0, packet.InputBitmask0).ToPackage();
-            self.input[1] = new Common.Input(packet.InputDir1, packet.InputBitmask1).ToPackage();
-            self.input[2] = new Common.Input(packet.InputDir2, packet.InputBitmask2).ToPackage();
-            self.input[3] = new Common.Input(packet.InputDir3, packet.InputBitmask3).ToPackage();
-            self.input[4] = new Common.Input(packet.InputDir4, packet.InputBitmask4).ToPackage();
-            self.input[5] = new Common.Input(packet.InputDir5, packet.InputBitmask5).ToPackage();
-            self.input[6] = new Common.Input(packet.InputDir6, packet.InputBitmask6).ToPackage();
-            self.input[7] = new Common.Input(packet.InputDir7, packet.InputBitmask7).ToPackage();
-            self.input[8] = new Common.Input(packet.InputDir8, packet.InputBitmask8).ToPackage();
-            self.input[9] = new Common.Input(packet.InputDir9, packet.InputBitmask9).ToPackage();
+            self.input[0] = new Input(packet.InputDir0, packet.InputBitmask0).ToPackage();
+            self.input[1] = new Input(packet.InputDir1, packet.InputBitmask1).ToPackage();
+            self.input[2] = new Input(packet.InputDir2, packet.InputBitmask2).ToPackage();
+            self.input[3] = new Input(packet.InputDir3, packet.InputBitmask3).ToPackage();
+            self.input[4] = new Input(packet.InputDir4, packet.InputBitmask4).ToPackage();
+            self.input[5] = new Input(packet.InputDir5, packet.InputBitmask5).ToPackage();
+            self.input[6] = new Input(packet.InputDir6, packet.InputBitmask6).ToPackage();
+            self.input[7] = new Input(packet.InputDir7, packet.InputBitmask7).ToPackage();
+            self.input[8] = new Input(packet.InputDir8, packet.InputBitmask8).ToPackage();
+            self.input[9] = new Input(packet.InputDir9, packet.InputBitmask9).ToPackage();
         }
         // Or stand still.
         else if (session.PlayerLastInput.TryGetValue(self.ID(), out var input)) {
             self.input[0] = input.ToPackage();
         }
     }
-    private Player.InputPackage RWInput_PlayerInput(On.RWInput.orig_PlayerInput orig, int playerNumber, Options options, RainWorldGame.SetupValues setup)
+    private Player.InputPackage RWInput_PlayerInput(On.RWInput.orig_PlayerInput orig, int playerNumber, RainWorld rainWorld)
     {
-        if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession) {
+        if (rainWorld.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession) {
             // Just take player 0's input. The other players aren't really there.
             playerNumber = 0;
         }
-        return orig(playerNumber, options, setup);
+        return orig(playerNumber, rainWorld);
     }
 
     private bool Player_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
@@ -225,12 +225,14 @@ partial class Main
         }
     }
 
-    private Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, int i)
+    private Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, SlugcatStats.Name name)
     {
-        if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession sess && sess.ClientData.TryGetValue(i, out var data)) {
+        if (Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession sess &&
+            name.value.StartsWith("Garland Player ") && int.TryParse(name.value.Substring("Garland Player ".Length), out int playerNum) &&
+            sess.ClientData.TryGetValue(playerNum, out var data)) {
             return data.SkinColor;
         }
-        return orig(i);
+        return orig(name);
     }
 
     private void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)

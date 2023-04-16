@@ -27,13 +27,13 @@ sealed class ServerSession : GameSession
         return hash;
     }
 
-    public ServerSession(byte slugcatWorld, RainWorldGame game) : base(game)
+    public ServerSession(SlugcatStats.Name slugcatWorld, RainWorldGame game) : base(game)
     {
         SlugcatWorld = slugcatWorld;
         RoomRealizer = new(game, this);
     }
 
-    public readonly byte SlugcatWorld;
+    public readonly SlugcatStats.Name SlugcatWorld;
     public readonly ServerRoomLogic RoomRealizer;
     public readonly List<Common.Input> LastInput = new();
     public readonly ServerSaveState Save = new();
@@ -43,8 +43,8 @@ sealed class ServerSession : GameSession
 
     private SharedPlayerData CreateNewPlayerData(string hash, int pid)
     {
-        int seed = Rng.seed;
-        Rng.seed = hash.GetHashCode();
+        Rng.State state = Rng.state;
+        Rng.InitState(hash.GetHashCode());
 
         float hue = Rng.value * Rng.value;
         float saturation = Lerp(1f, 0.80f, Rng.value);
@@ -64,7 +64,7 @@ sealed class ServerSession : GameSession
         float speed = Pow(Lerp(-1, +1, Rng.value), 2);
         float charm = Pow(Lerp(-1, +1, Rng.value), 2);
 
-        Rng.seed = seed;
+        Rng.state = state;
 
         int foodSleep = Max(2,       4 + (int)(speed * 2.4f + fat * 1.4f));
         int foodMax = Max(foodSleep, 7 + (int)(fat * 4.5f));
@@ -121,7 +121,7 @@ sealed class ServerSession : GameSession
             // Create new abstract player and add it
             EntityID id = new(-1, pid); // TODO: other objects' IDs start at 1000, so this is a safe bet.. for now. Make IDs start at 100,000 later.
             AbstractCreature player = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, CreateNewPlayerPos(), id);
-            player.state = new PlayerState(player, pid, 0, false);
+            player.state = new PlayerState(player, pid, SlugcatStats.Name.White, false);
 
             base.AddPlayer(player);
         }

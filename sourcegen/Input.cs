@@ -9,15 +9,15 @@
 # Sent to the server any time the client's input changes.
 Input = 0x100 {
     vec Dir
-    u8  Bitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8 }
+    u8  Bitmask { Jump = 0x1, Throw = 0x2, Pickup = 0x4, Point = 0x8, Map = 0x16 }
 }
 
 # Sent to clients joining a game session.
 EnterSession = 0x200 {
-    u8  SlugcatWorld
     u16 RainbowSeed
     i32 ClientPid
     str StartingRoom
+    str SlugcatWorld
 }
 
 # Sent every 15 seconds, after `GlobalRain.rainDirectionGetTo` changes, and after a client joins.
@@ -30,12 +30,12 @@ SyncRain = 0x201 {
 
 # Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.
 SyncDeathRain = 0x202 {
-    u8  DeathRainMode
     f32 TimeInThisMode
     f32 Progression
     f32 CalmBeforeSunlight
     f32 Flood
     f32 FloodSpeed
+    str DeathRainMode
 }
 
 # Sent after each time AntiGravity toggles on or off. Progress is set to 0 each time the packet is received.
@@ -48,12 +48,12 @@ SyncAntiGrav = 0x203 {
 
 # Tells a client to realize a room if it hasn't already.
 RealizeRoom = 0x204 {
-    i32 Index
+    str Room
 }
 
 # Tells a client to abtractize a room if it hasn't already. TODO (low-priority)
 AbstractizeRoom = 0x205 {
-    i32 Index
+    str Room
 }
 
 # Tells a client to destroy an object if it exists.
@@ -69,7 +69,7 @@ KillCreature = 0x207 {
 # Tells a client that a creature is inside a shortcut. TODO (high-priority)
 SyncShortcut = 0x208 {
     i32    CreatureID
-    i32    Room
+    str    Room
     i32    EntranceNode
     i32    Wait
     ivec[] Positions
@@ -95,7 +95,7 @@ Release = 0x20A {
 # Introduces a player to a client.
 IntroPlayer = 0x250 {
     i32  ID
-    i32  Room
+    str  Room
     u8   SkinR
     u8   SkinG
     u8   SkinB
@@ -122,8 +122,8 @@ IntroPlayer = 0x250 {
 UpdatePlayer = 0x251 {
     i32 ID
     bool Standing
-    u8  BodyMode
-    u8  Animation
+    str BodyMode
+    str Animation
     u8  AnimationFrame
     i8  FlipDirection
     i8  FlipDirectionLast
@@ -156,7 +156,7 @@ UpdatePlayer = 0x251 {
 # TODO!!
 IntroFly = 0x252 {
     i32 ID
-    i32 Room
+    str Room
 }
 
 UpdateFly = 0x253 {

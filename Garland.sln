@@ -4,8 +4,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "client\Client.csproj", "{C02B8D38-5DDE-439F-A1AA-C68C11753BD8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7E587EB6-A75A-4F13-8387-3D514753C1BC} = {7E587EB6-A75A-4F13-8387-3D514753C1BC}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server", "server\Server.csproj", "{A7B72112-5114-49A8-90FA-B7AD721B04EF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7E587EB6-A75A-4F13-8387-3D514753C1BC} = {7E587EB6-A75A-4F13-8387-3D514753C1BC}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SourceGen", "sourcegen\SourceGen.csproj", "{7E587EB6-A75A-4F13-8387-3D514753C1BC}"
 EndProject

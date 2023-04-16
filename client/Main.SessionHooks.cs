@@ -65,7 +65,7 @@ partial class Main
     };
 
 
-    int? storyCharOverride = null;
+    SlugcatStats.Name? storyCharOverride = null;
     private void Room_ctor(On.Room.orig_ctor orig, Room self, RainWorldGame game, World world, AbstractRoom abstractRoom)
     {
         if (game?.session is ClientSession session) {
@@ -80,10 +80,10 @@ partial class Main
             orig(self, game, world, abstractRoom);
         }
     }
-    private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, int playerChar)
+    private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, SlugcatStats.Name playerChar)
     {
-        if (storyCharOverride.HasValue) {
-            playerChar = storyCharOverride.Value;
+        if (storyCharOverride != null) {
+            playerChar = storyCharOverride;
         }
         orig(self, name, region, template, firstTemplate, playerChar);
     }
@@ -107,7 +107,7 @@ partial class Main
     private void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
         if (startPacket is EnterSession session) {
-            game.session = new ClientSession(session.SlugcatWorld, session.ClientPid, game);
+            game.session = new ClientSession(new(session.SlugcatWorld), session.ClientPid, game);
             game.startingRoom = session.StartingRoom;
         }
 
@@ -134,7 +134,7 @@ partial class Main
         else
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
 
-        self.LoadWorld(startingRegion, startPacket.Value.SlugcatWorld, false);
+        self.LoadWorld(startingRegion, new(startPacket.Value.SlugcatWorld), false);
         self.FIRSTROOM = startingRoom;
     }
 

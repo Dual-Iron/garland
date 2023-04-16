@@ -10,9 +10,6 @@ public static class Utils
     public const int MaxConnections = 55; // arbitrary
     public const int DefaultPort = 10933;
 
-    private static RainWorld? rw;
-    public static RainWorld Rw => rw ??= Object.FindObjectOfType<RainWorld>();
-
     public static bool DirExistsAt(params string[] path)
     {
         return Directory.Exists(BepInEx.Utility.CombinePaths(path));

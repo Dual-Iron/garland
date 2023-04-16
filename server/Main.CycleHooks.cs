@@ -21,7 +21,7 @@ partial class Main
 
     private SyncDeathRain ToPacket(GlobalRain.DeathRain rain)
     {
-        return new SyncDeathRain((byte)rain.deathRainMode, rain.timeInThisMode, rain.progression, rain.calmBeforeStormSunlight, rain.globalRain.flood, rain.globalRain.floodSpeed);
+        return new SyncDeathRain(rain.timeInThisMode, rain.progression, rain.calmBeforeStormSunlight, rain.globalRain.flood, rain.globalRain.floodSpeed, rain.deathRainMode.value);
     }
 
     private void GameHooks()

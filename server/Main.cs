@@ -11,7 +11,7 @@ partial class Main
 {
     private static Main? instance;
     public static Main Instance => instance ??= new();
-    public static ManualLogSource Log { get; } = Logger.CreateLogSource("Server");
+    public static ManualLogSource Log { get; } = BepInEx.Logging.Logger.CreateLogSource("Server");
 
     public readonly NetManager server;
 
@@ -49,7 +49,7 @@ partial class Main
             DateTime now = DateTime.UtcNow;
             Log.LogDebug($"Connected to {peer.EndPoint} at {now:HH:mm:ss}.{now.Millisecond:D3}");
 
-            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
+            if (RWCustom.Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
                 string name = peer.EndPoint.ToString();
 
                 if (session.AnyPeerConnected(name)) {
@@ -63,7 +63,7 @@ partial class Main
                     player.RealizeInRoom();
                 }
 
-                EnterSession packet = new(ServerConfig.SlugcatWorld, (ushort)game.world.rainCycle.rainbowSeed, player.ID(), player.Room.name);
+                EnterSession packet = new((ushort)game.world.rainCycle.rainbowSeed, player.ID(), player.Room.name, ServerConfig.SlugcatWorld);
 
                 peer.Send(packet, DeliveryMethod.ReliableOrdered);
 
@@ -73,7 +73,7 @@ partial class Main
         listener.PeerDisconnectedEvent += (peer, info) => {
             Log.LogDebug($"Disconnected from {peer.EndPoint}: {info.Reason}");
 
-            if (Utils.Rw.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
+            if (RWCustom.Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.session is ServerSession session) {
                 session.Leave(peer);
             }
         };
@@ -96,8 +96,8 @@ partial class Main
         On.SoundLoader.ShouldSoundPlay += delegate { return false; };
         // TODO see if this works...? On.RainWorldGame.GrafUpdate += delegate { };
 
-        ManualLogSource unityLog = Logger.CreateLogSource("Unity");
-        Application.RegisterLogCallback((message, stackTrace, type) => {
+        ManualLogSource unityLog = BepInEx.Logging.Logger.CreateLogSource("Unity");
+        Application.logMessageReceived += (message, stackTrace, type) => {
             switch (type) {
                 case LogType.Error:
                 case LogType.Assert:
@@ -113,7 +113,7 @@ partial class Main
                     unityLog.LogInfo(message);
                     break;
             }
-        });
+        };
     }
 
     private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)

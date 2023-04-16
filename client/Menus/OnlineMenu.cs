@@ -12,7 +12,7 @@ sealed class OnlineMenu : Menu.Menu
     readonly SimpleButton join;
     readonly SimpleButton joinOzql;
 
-    public OnlineMenu(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
+    public OnlineMenu(ProcessManager manager) : base(manager, Enums.OnlineMenu)
     {
         pages.Add(new(this, null, "main", 0));
 
@@ -67,7 +67,7 @@ sealed class OnlineMenu : Menu.Menu
             Main.Log.LogDebug($"Joining game: {s}");
 
             manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
-            manager.menuSetup.startGameCondition = (ProcessManager.MenuSetup.StoryGameInitCondition)(-40);
+            manager.menuSetup.startGameCondition = Enums.OnlineStart;
         }
     }
 }

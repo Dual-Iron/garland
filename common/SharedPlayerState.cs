@@ -33,7 +33,7 @@ sealed class SharedPlayerData
     {
         if (Ill) {
             // If malnourished, only override properties that malnourishment doesn't override.
-            return new(0, malnourished: true) {
+            return new(SlugcatStats.Name.White, malnourished: true) {
                 maxFood = FoodMax,
                 foodToHibernate = FoodMax,
                 generalVisibilityBonus = VisBonus,
@@ -43,7 +43,7 @@ sealed class SharedPlayerData
             };
         }
         // Override basically everything.
-        return new(0, false) {
+        return new(SlugcatStats.Name.White, false) {
             maxFood = FoodMax,
             foodToHibernate = FoodSleep,
             runspeedFac = RunSpeed,
@@ -57,7 +57,7 @@ sealed class SharedPlayerData
         };
     }
 
-    public IntroPlayer ToPacket(int id, int room) => new(id, room, SkinColor.r, SkinColor.g, SkinColor.b, EyeColor.r, EyeColor.g, EyeColor.b, Fat, Speed, Charm,
+    public IntroPlayer ToPacket(int id, string room) => new(id, room, SkinColor.r, SkinColor.g, SkinColor.b, EyeColor.r, EyeColor.g, EyeColor.b, Fat, Speed, Charm,
         FoodMax, FoodSleep, RunSpeed, PoleClimbSpeed, CorridorClimbSpeed, Weight, VisBonus, SneakStealth, Loudness, LungWeakness, 
         IntroPlayer.ToBitmask(Ill, EatsMeat, Glows, HasMark)
         );

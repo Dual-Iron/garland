@@ -36,11 +36,11 @@ sealed class ClientRoomLogic
         }
 
         foreach (var packet in RealizeRoom.All()) {
-            game.world.ActivateRoom(packet.Index);
+            game.world.ActivateRoom(packet.Room);
         }
 
         foreach (var packet in AbstractizeRoom.All()) {
-            game.world.GetAbstractRoom(packet.Index).Abstractize();
+            game.world.GetAbstractRoom(packet.Room).Abstractize();
         }
 
         foreach (var packet in DestroyObject.All()) {
@@ -115,7 +115,7 @@ sealed class ClientRoomLogic
             session.ClientData[packet.ID] = SharedPlayerData.FromPacket(packet);
 
             AbstractCreature p = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, new(packet.Room, 0, 0, -1), new(-1, packet.ID));
-            p.state = new PlayerState(p, playerNumber: packet.ID, slugcatCharacter: packet.ID, false);
+            p.state = new PlayerState(p, playerNumber: packet.ID, slugcatCharacter: new("Garland Player " + packet.ID), false);
             p.Room.AddEntity(p);
             p.RealizeInRoom();
 

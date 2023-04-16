@@ -37,8 +37,8 @@ public enum PacketKind : ushort
     IntroPlayer = 0x250,
     /// <summary>Updates a player for a client.</summary>
     UpdatePlayer = 0x251,
-    IntroFly = 0x252,
     /// <summary>TODO!!</summary>
+    IntroFly = 0x252,
     UpdateFly = 0x253,
 
 }
@@ -100,18 +100,19 @@ public record struct Input(Vector2 Dir, byte Bitmask) : IPacket
         writer.Put(Bitmask);
 
     }
-    public static byte ToBitmask(bool Jump, bool Throw, bool Pickup, bool Point)
+    public static byte ToBitmask(bool Jump, bool Throw, bool Pickup, bool Point, bool Map)
     {
-        return (byte)((Jump ? 0x1 : 0) | (Throw ? 0x2 : 0) | (Pickup ? 0x4 : 0) | (Point ? 0x8 : 0));
+        return (byte)((Jump ? 0x1 : 0) | (Throw ? 0x2 : 0) | (Pickup ? 0x4 : 0) | (Point ? 0x8 : 0) | (Map ? 0x16 : 0));
     }
     public bool Jump => (Bitmask & 0x1) != 0;
     public bool Throw => (Bitmask & 0x2) != 0;
     public bool Pickup => (Bitmask & 0x4) != 0;
     public bool Point => (Bitmask & 0x8) != 0;
+    public bool Map => (Bitmask & 0x16) != 0;
 
 }
 /// <summary>Sent to clients joining a game session.</summary>
-public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int ClientPid, string StartingRoom) : IPacket
+public record struct EnterSession(ushort RainbowSeed, int ClientPid, string StartingRoom, string SlugcatWorld) : IPacket
 {
     public static PacketQueue<EnterSession> Queue { get; } = new();
     public static bool Latest(out EnterSession packet) => Queue.Latest(out _, out packet);
@@ -119,18 +120,18 @@ public record struct EnterSession(byte SlugcatWorld, ushort RainbowSeed, int Cli
     public PacketKind GetKind() => PacketKind.EnterSession;
     public void Deserialize(NetDataReader reader)
     {
-        SlugcatWorld = reader.GetByte();
         RainbowSeed = reader.GetUShort();
         ClientPid = reader.GetInt();
         StartingRoom = reader.GetString();
+        SlugcatWorld = reader.GetString();
 
     }
     public void Serialize(NetDataWriter writer)
     {
-        writer.Put(SlugcatWorld);
         writer.Put(RainbowSeed);
         writer.Put(ClientPid);
         writer.Put(StartingRoom);
+        writer.Put(SlugcatWorld);
 
     }
 }
@@ -159,7 +160,7 @@ public record struct SyncRain(int RainTimer, int RainTimerMax, float RainDirecti
     }
 }
 /// <summary>Sent every two seconds, after `DeathRain.deathRainMode` changes, and after a client joins. Only sent after death rain begins.</summary>
-public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, float Progression, float CalmBeforeSunlight, float Flood, float FloodSpeed) : IPacket
+public record struct SyncDeathRain(float TimeInThisMode, float Progression, float CalmBeforeSunlight, float Flood, float FloodSpeed, string DeathRainMode) : IPacket
 {
     public static PacketQueue<SyncDeathRain> Queue { get; } = new();
     public static bool Latest(out SyncDeathRain packet) => Queue.Latest(out _, out packet);
@@ -167,22 +168,22 @@ public record struct SyncDeathRain(byte DeathRainMode, float TimeInThisMode, flo
     public PacketKind GetKind() => PacketKind.SyncDeathRain;
     public void Deserialize(NetDataReader reader)
     {
-        DeathRainMode = reader.GetByte();
         TimeInThisMode = reader.GetFloat();
         Progression = reader.GetFloat();
         CalmBeforeSunlight = reader.GetFloat();
         Flood = reader.GetFloat();
         FloodSpeed = reader.GetFloat();
+        DeathRainMode = reader.GetString();
 
     }
     public void Serialize(NetDataWriter writer)
     {
-        writer.Put(DeathRainMode);
         writer.Put(TimeInThisMode);
         writer.Put(Progression);
         writer.Put(CalmBeforeSunlight);
         writer.Put(Flood);
         writer.Put(FloodSpeed);
+        writer.Put(DeathRainMode);
 
     }
 }
@@ -211,7 +212,7 @@ public record struct SyncAntiGrav(bool On, ushort Counter, float From, float To)
     }
 }
 /// <summary>Tells a client to realize a room if it hasn't already.</summary>
-public record struct RealizeRoom(int Index) : IPacket
+public record struct RealizeRoom(string Room) : IPacket
 {
     public static PacketQueue<RealizeRoom> Queue { get; } = new();
     public static bool Latest(out RealizeRoom packet) => Queue.Latest(out _, out packet);
@@ -219,17 +220,17 @@ public record struct RealizeRoom(int Index) : IPacket
     public PacketKind GetKind() => PacketKind.RealizeRoom;
     public void Deserialize(NetDataReader reader)
     {
-        Index = reader.GetInt();
+        Room = reader.GetString();
 
     }
     public void Serialize(NetDataWriter writer)
     {
-        writer.Put(Index);
+        writer.Put(Room);
 
     }
 }
 /// <summary>Tells a client to abtractize a room if it hasn't already. TODO (low-priority)</summary>
-public record struct AbstractizeRoom(int Index) : IPacket
+public record struct AbstractizeRoom(string Room) : IPacket
 {
     public static PacketQueue<AbstractizeRoom> Queue { get; } = new();
     public static bool Latest(out AbstractizeRoom packet) => Queue.Latest(out _, out packet);
@@ -237,12 +238,12 @@ public record struct AbstractizeRoom(int Index) : IPacket
     public PacketKind GetKind() => PacketKind.AbstractizeRoom;
     public void Deserialize(NetDataReader reader)
     {
-        Index = reader.GetInt();
+        Room = reader.GetString();
 
     }
     public void Serialize(NetDataWriter writer)
     {
-        writer.Put(Index);
+        writer.Put(Room);
 
     }
 }
@@ -283,7 +284,7 @@ public record struct KillCreature(int ID) : IPacket
     }
 }
 /// <summary>Tells a client that a creature is inside a shortcut. TODO (high-priority)</summary>
-public record struct SyncShortcut(int CreatureID, int Room, int EntranceNode, int Wait, IntVector2[] Positions) : IPacket
+public record struct SyncShortcut(int CreatureID, string Room, int EntranceNode, int Wait, IntVector2[] Positions) : IPacket
 {
     public static PacketQueue<SyncShortcut> Queue { get; } = new();
     public static bool Latest(out SyncShortcut packet) => Queue.Latest(out _, out packet);
@@ -292,7 +293,7 @@ public record struct SyncShortcut(int CreatureID, int Room, int EntranceNode, in
     public void Deserialize(NetDataReader reader)
     {
         CreatureID = reader.GetInt();
-        Room = reader.GetInt();
+        Room = reader.GetString();
         EntranceNode = reader.GetInt();
         Wait = reader.GetInt();
         Positions = reader.GetIVecArray();
@@ -368,7 +369,7 @@ public record struct Release(int GrabbedID, int GrabberID, byte GraspUsed) : IPa
     }
 }
 /// <summary>Introduces a player to a client.</summary>
-public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte SkinB, byte EyeR, byte EyeG, byte EyeB, float Fat, float Speed, float Charm, byte FoodMax, byte FoodSleep, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float Weight, float VisBonus, float SneakStealth, float Loudness, float LungWeakness, byte Bitmask) : IPacket
+public record struct IntroPlayer(int ID, string Room, byte SkinR, byte SkinG, byte SkinB, byte EyeR, byte EyeG, byte EyeB, float Fat, float Speed, float Charm, byte FoodMax, byte FoodSleep, float RunSpeed, float PoleClimbSpeed, float CorridorClimbSpeed, float Weight, float VisBonus, float SneakStealth, float Loudness, float LungWeakness, byte Bitmask) : IPacket
 {
     public static PacketQueue<IntroPlayer> Queue { get; } = new();
     public static bool Latest(out IntroPlayer packet) => Queue.Latest(out _, out packet);
@@ -377,7 +378,7 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
     public void Deserialize(NetDataReader reader)
     {
         ID = reader.GetInt();
-        Room = reader.GetInt();
+        Room = reader.GetString();
         SkinR = reader.GetByte();
         SkinG = reader.GetByte();
         SkinB = reader.GetByte();
@@ -437,7 +438,7 @@ public record struct IntroPlayer(int ID, int Room, byte SkinR, byte SkinG, byte 
 
 }
 /// <summary>Updates a player for a client.</summary>
-public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Animation, byte AnimationFrame, sbyte FlipDirection, sbyte FlipDirectionLast, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir0, Vector2 InputDir1, Vector2 InputDir2, Vector2 InputDir3, Vector2 InputDir4, Vector2 InputDir5, Vector2 InputDir6, Vector2 InputDir7, Vector2 InputDir8, Vector2 InputDir9, byte InputBitmask0, byte InputBitmask1, byte InputBitmask2, byte InputBitmask3, byte InputBitmask4, byte InputBitmask5, byte InputBitmask6, byte InputBitmask7, byte InputBitmask8, byte InputBitmask9) : IPacket
+public record struct UpdatePlayer(int ID, bool Standing, string BodyMode, string Animation, byte AnimationFrame, sbyte FlipDirection, sbyte FlipDirectionLast, Vector2 HeadPos, Vector2 HeadVel, Vector2 ButtPos, Vector2 ButtVel, Vector2 InputDir0, Vector2 InputDir1, Vector2 InputDir2, Vector2 InputDir3, Vector2 InputDir4, Vector2 InputDir5, Vector2 InputDir6, Vector2 InputDir7, Vector2 InputDir8, Vector2 InputDir9, byte InputBitmask0, byte InputBitmask1, byte InputBitmask2, byte InputBitmask3, byte InputBitmask4, byte InputBitmask5, byte InputBitmask6, byte InputBitmask7, byte InputBitmask8, byte InputBitmask9) : IPacket
 {
     public static PacketQueue<UpdatePlayer> Queue { get; } = new();
     public static bool Latest(out UpdatePlayer packet) => Queue.Latest(out _, out packet);
@@ -447,8 +448,8 @@ public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Ani
     {
         ID = reader.GetInt();
         Standing = reader.GetBool();
-        BodyMode = reader.GetByte();
-        Animation = reader.GetByte();
+        BodyMode = reader.GetString();
+        Animation = reader.GetString();
         AnimationFrame = reader.GetByte();
         FlipDirection = reader.GetSByte();
         FlipDirectionLast = reader.GetSByte();
@@ -514,7 +515,8 @@ public record struct UpdatePlayer(int ID, bool Standing, byte BodyMode, byte Ani
 
     }
 }
-public record struct IntroFly(int ID, int Room) : IPacket
+/// <summary>TODO!!</summary>
+public record struct IntroFly(int ID, string Room) : IPacket
 {
     public static PacketQueue<IntroFly> Queue { get; } = new();
     public static bool Latest(out IntroFly packet) => Queue.Latest(out _, out packet);
@@ -523,7 +525,7 @@ public record struct IntroFly(int ID, int Room) : IPacket
     public void Deserialize(NetDataReader reader)
     {
         ID = reader.GetInt();
-        Room = reader.GetInt();
+        Room = reader.GetString();
 
     }
     public void Serialize(NetDataWriter writer)
@@ -533,7 +535,6 @@ public record struct IntroFly(int ID, int Room) : IPacket
 
     }
 }
-/// <summary>TODO!!</summary>
 public record struct UpdateFly(int ID) : IPacket
 {
     public static PacketQueue<UpdateFly> Queue { get; } = new();

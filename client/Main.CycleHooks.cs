@@ -29,7 +29,7 @@ partial class Main
     {
         orig(self);
 
-        if (self.game.session is not ClientSession session) return;
+        if (self.game.session is not ClientSession) return;
 
         RainCycle rainCycle = self.game.world.rainCycle;
 
@@ -46,9 +46,9 @@ partial class Main
                 rainCycle.RainHit();
             }
 
-            deathRain.Deconstruct(out var mode, out self.deathRain!.timeInThisMode, out self.deathRain.progression, out self.deathRain.calmBeforeStormSunlight, out self.flood, out self.floodSpeed);
+            deathRain.Deconstruct(out self.deathRain!.timeInThisMode, out self.deathRain.progression, out self.deathRain.calmBeforeStormSunlight, out self.flood, out self.floodSpeed, out string mode);
 
-            self.deathRain.deathRainMode = (GlobalRain.DeathRain.DeathRainMode)mode;
+            self.deathRain.deathRainMode = new(mode);
 
             CatchUpDeathRain(self, self.deathRain.deathRainMode);
         }
@@ -70,28 +70,24 @@ partial class Main
         // This basically sets values to what they *would* be, if they had progressed past the previous stage (progression = 1).
         // See GlobalRain::DeathRain::Update
 
-        switch (mode) {
-            case GlobalRain.DeathRain.DeathRainMode.GradeAPlateu:
-                rain.Intensity = 0.6f;
-                rain.MicroScreenShake = 1.5f;
-                rain.bulletRainDensity = 0f;
-                break;
-
-            case GlobalRain.DeathRain.DeathRainMode.GradeBPlateu:
-                rain.Intensity = 0.71f;
-                rain.MicroScreenShake = 2.1f;
-                rain.ScreenShake = 1.2f;
-                break;
-
-            case GlobalRain.DeathRain.DeathRainMode.Mayhem:
-                rain.Intensity = 1f;
-                rain.MicroScreenShake = 4f;
-                rain.ScreenShake = 3f;
-                break;
+        if (mode == GlobalRain.DeathRain.DeathRainMode.GradeAPlateu) {
+            rain.Intensity = 0.6f;
+            rain.MicroScreenShake = 1.5f;
+            rain.bulletRainDensity = 0f;
+        }
+        else if (mode == GlobalRain.DeathRain.DeathRainMode.GradeBPlateu) {
+            rain.Intensity = 0.71f;
+            rain.MicroScreenShake = 2.1f;
+            rain.ScreenShake = 1.2f;
+        }
+        else if (mode == GlobalRain.DeathRain.DeathRainMode.Mayhem) {
+            rain.Intensity = 1f;
+            rain.MicroScreenShake = 4f;
+            rain.ScreenShake = 3f;
         }
 
         // Also this
-        if (mode > GlobalRain.DeathRain.DeathRainMode.CalmBeforeStorm) {
+        if (mode != GlobalRain.DeathRain.DeathRainMode.None && mode != GlobalRain.DeathRain.DeathRainMode.CalmBeforeStorm) {
             rain.ShaderLight = -1f;
         }
     }

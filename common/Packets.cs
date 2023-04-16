@@ -40,7 +40,7 @@ public static partial class Packets
 
     public static Player.InputPackage ToPackage(this Input input)
     {
-        Player.InputPackage package = new(false, 0, 0, input.Jump, input.Throw, input.Pickup, input.Pickup, false) {
+        Player.InputPackage package = new(false, Options.ControlSetup.Preset.KeyboardSinglePlayer, 0, 0, input.Jump, input.Throw, input.Pickup, input.Map, false) {
             analogueDir = input.Dir
         };
         if (input.Dir.x > +0.5f) package.x = +1;
@@ -54,7 +54,7 @@ public static partial class Packets
     {
         Vector2 dir = input.analogueDir != default ? input.analogueDir : new Vector2(input.x, input.y).normalized;
 
-        return new(dir, Input.ToBitmask(input.jmp, input.thrw, input.pckp, input.mp));
+        return new(dir, Input.ToBitmask(input.jmp, input.thrw, input.pckp, input.mp, input.mp));
     }
 
     #region Custom Get/Put methods for LiteNetLib

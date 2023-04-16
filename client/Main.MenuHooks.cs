@@ -1,6 +1,4 @@
 ﻿using Menu;
-using Mono.Cecil.Cil;
-using MonoMod.Cil;
 using System.Linq;
 
 namespace Client;
@@ -8,13 +6,12 @@ namespace Client;
 partial class Main
 {
     const string signal = "GARLAND_ONLINE";
-    const ProcessManager.ProcessID onlineMenu = (ProcessManager.ProcessID)(-10933);
 
     private void MenuHooks()
     {
         On.Menu.MainMenu.ctor += ReplaceSingleplayerButton;
         On.Menu.MainMenu.Singal += MainMenu_Singal;
-        IL.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
+        On.ProcessManager.PostSwitchMainProcess += ProcessManager_PostSwitchMainProcess;
     }
 
     private void ReplaceSingleplayerButton(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
@@ -46,7 +43,7 @@ partial class Main
     private void MainMenu_Singal(On.Menu.MainMenu.orig_Singal orig, MainMenu self, MenuObject sender, string message)
     {
         if (message == signal) {
-            self.manager.RequestMainProcessSwitch(onlineMenu);
+            self.manager.RequestMainProcessSwitch(Enums.OnlineMenu);
             self.PlaySound(SoundID.MENU_Switch_Page_In);
         }
         else {
@@ -54,22 +51,11 @@ partial class Main
         }
     }
 
-    private void ProcessManager_SwitchMainProcess(ILContext il)
+    private void ProcessManager_PostSwitchMainProcess(On.ProcessManager.orig_PostSwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
     {
-        ILCursor cursor = new(il);
-
-        cursor.GotoNext(i => i.MatchSwitch(out _));
-
-        // SwitchToCustomProcess(this, ID);
-        cursor.Emit(OpCodes.Ldarg_0);
-        cursor.Emit(OpCodes.Ldarg_1);
-        cursor.EmitDelegate(SwitchToCustomProcess);
-    }
-
-    private void SwitchToCustomProcess(ProcessManager pm, ProcessManager.ProcessID pid)
-    {
-        if (pid == onlineMenu) {
-            pm.currentMainLoop = new Menus.OnlineMenu(pm, onlineMenu);
+        if (ID == Enums.OnlineMenu) {
+            self.currentMainLoop = new Menus.OnlineMenu(self);
         }
+        orig(self, ID);
     }
 }

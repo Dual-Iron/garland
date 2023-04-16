@@ -17,6 +17,7 @@ partial class Main
         // Check for player input packets and use them
         On.Room.Update += Room_Update;
         On.RWInput.PlayerInput += RWInput_PlayerInput;
+        On.RWInput.PlayerInput += RWInput_PlayerInput;
 
         // Allow omnivorous players to eat meat
         On.Player.CanEatMeat += Player_CanEatMeat;
@@ -75,10 +76,9 @@ partial class Main
         orig(self);
     }
 
-    private Player.InputPackage RWInput_PlayerInput(On.RWInput.orig_PlayerInput orig, int playerNumber, Options options, RainWorldGame.SetupValues setup)
+    private Player.InputPackage RWInput_PlayerInput(On.RWInput.orig_PlayerInput orig, int playerNumber, RainWorld rainWorld)
     {
-        // Return last input instead of actual controller input
-        if (Utils.Rw.processManager.currentMainLoop is RainWorldGame g && playerNumber >= 0 && playerNumber < g.Session().LastInput.Count) {
+        if (rainWorld.processManager.currentMainLoop is RainWorldGame g && playerNumber >= 0 && playerNumber < g.Session().LastInput.Count) {
             return g.Session().LastInput[playerNumber].ToPackage();
         }
         return default;
@@ -96,8 +96,8 @@ partial class Main
         UpdatePlayer update = new() {
             ID = p.ID(),
             Standing = p.standing,
-            BodyMode = (byte)p.bodyMode,
-            Animation = (byte)p.animation,
+            BodyMode = p.bodyMode.value,
+            Animation = p.animation.value,
             AnimationFrame = (byte)p.animationFrame,
             FlipDirection = (sbyte)p.flipDirection,
             FlipDirectionLast = (sbyte)p.lastFlipDirection,
@@ -129,10 +129,10 @@ partial class Main
         p.BroadcastRelevant(update, LiteNetLib.DeliveryMethod.ReliableSequenced);
     }
 
-    private int Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
+    private Player.ObjectGrabability Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
     {
         if (self != obj && obj is Player) {
-            return (int)Player.ObjectGrabability.BigOneHand;
+            return Player.ObjectGrabability.BigOneHand;
         }
         return orig(self, obj);
     }

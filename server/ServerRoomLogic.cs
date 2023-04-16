@@ -119,7 +119,7 @@ sealed class ServerRoomLogic
     {
         peer.RoomStates[room.index] = RoomState.Abstract;
         if (peer.RealizedRooms.Remove(room.index)) {
-            peer.NetPeer.Send(new AbstractizeRoom(room.index));
+            peer.NetPeer.Send(new AbstractizeRoom(room.name));
         }
 
         foreach (var entity in room.entities) {
@@ -145,7 +145,7 @@ sealed class ServerRoomLogic
         foreach (var peer in trackedPeers) {
             peer.RoomStates[room.index] = RoomState.Abstract;
             if (peer.RealizedRooms.Remove(room.index)) {
-                peer.NetPeer.Send(new AbstractizeRoom(room.index));
+                peer.NetPeer.Send(new AbstractizeRoom(room.name));
             }
         }
 
@@ -212,7 +212,7 @@ sealed class ServerRoomLogic
             peer.RealizedRooms.Add(room.index);
 
             // Tell client to realize the room if it hasn't already
-            peer.NetPeer.Send(new RealizeRoom(room.index));
+            peer.NetPeer.Send(new RealizeRoom(room.name));
 
             // Start realizing the room on the server
             room.world.ActivateRoom(room);
@@ -266,7 +266,7 @@ sealed class ServerRoomLogic
     {
         if (crit is Player p) {
             SharedPlayerData data = p.Data() ?? new();
-            peer.NetPeer.Send(data.ToPacket(id, p.abstractCreature.pos.room));
+            peer.NetPeer.Send(data.ToPacket(id, p.abstractCreature.Room.name));
         }
     }
 }

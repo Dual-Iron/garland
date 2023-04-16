@@ -2,11 +2,12 @@
 using System;
 using System.Security.Permissions;
 
+#pragma warning disable CS0618
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 
 namespace Server;
 
-[BepInPlugin("org.ozql.garland", "Garland", "0.1.0")]
+[BepInPlugin("org.ozql.garland-server", "Garland Server", "0.1.0")]
 sealed partial class Plugin : BaseUnityPlugin
 {
     public void OnEnable()
