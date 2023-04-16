@@ -19,18 +19,18 @@ jobs:
       run: dotnet publish Garland.sln -c Release -o output
     - name: Move output
       run: mkdir -p artifacts/{client,server} && rsync client/assets/ artifacts/client && rsync server/assets/ artifacts/server && mkdir artifacts/client/plugins && mv output/Client.dll artifacts/client/plugins/Client.dll && mkdir artifacts/server/plugins && mv output/Server.dll artifacts/server/plugins/Server.dll
-    - name: Zip client
-      uses: montudor/action-zip@v1.0.0
-      with:
-        args: zip -qq -r Mods.zip artifacts
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        path: Mods.zip
+        path: |
+          artifacts/client
+          artifacts/server
     - name: Upload release
       if: startsWith(github.ref, 'refs/tags/0.' )
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         prerelease: true
-        files: Mods.zip
+        files: |
+          artifacts/client
+          artifacts/server
