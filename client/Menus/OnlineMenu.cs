@@ -44,7 +44,7 @@ sealed class OnlineMenu : Menu.Menu
             PlaySound(SoundID.MENU_Start_New_Game);
         }
         else if (sender == joinOzql) {
-            Main.Instance.StartConnecting(Private.Host, port);
+            Main.Instance.StartConnecting("game.rustyiron.xyz", port);
             PlaySound(SoundID.MENU_Start_New_Game);
         }
     }
