@@ -8,11 +8,11 @@ partial class Main
 {
     private void GameHooks()
     {
-        On.HUD.RainMeter.ctor += RainMeter_ctor;
-        On.GlobalRain.Update += GlobalRain_Update;
+        On.HUD.RainMeter.ctor += UpdateCircles;
+        On.GlobalRain.Update += SyncRain;
     }
 
-    private void RainMeter_ctor(On.HUD.RainMeter.orig_ctor orig, RainMeter self, HUD.HUD hud, FContainer fContainer)
+    private void UpdateCircles(On.HUD.RainMeter.orig_ctor orig, RainMeter self, HUD.HUD hud, FContainer fContainer)
     {
         const int maxCircleCount = 30;
 
@@ -25,7 +25,7 @@ partial class Main
         finally { cyc.cycleLength = len; }
     }
 
-    private void GlobalRain_Update(On.GlobalRain.orig_Update orig, GlobalRain self)
+    private void SyncRain(On.GlobalRain.orig_Update orig, GlobalRain self)
     {
         orig(self);
 
@@ -33,7 +33,7 @@ partial class Main
 
         RainCycle rainCycle = self.game.world.rainCycle;
 
-        if (SyncRain.Latest(out var syncRain)) {
+        if (Common.SyncRain.Latest(out var syncRain)) {
             syncRain.Deconstruct(out var timer, out var cycleLength, out self.rainDirection, out self.rainDirectionGetTo);
 
             rainCycle.timer = timer;

@@ -14,7 +14,7 @@ partial class Main
         On.ProcessManager.PostSwitchMainProcess += ProcessManager_PostSwitchMainProcess;
     }
 
-    private void ReplaceSingleplayerButton(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
+    private void ReplaceSingleplayerButton(On.Menu.MainMenu.orig_ctor orig, MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
     {
         orig(self, manager, showRegionSpecificBkg);
 
@@ -23,7 +23,7 @@ partial class Main
         foreach (var button in self.pages[0].subObjects.OfType<SimpleButton>()) {
             // Add MULTI PLAYER button at location of REGIONS button
             if (add == null && button.signalText == "REGIONS") {
-                add = new SimpleButton(self, self.pages[0], "MULTI PLAYER", signal, button.pos, button.size);
+                add = new SimpleButton(self, self.pages[0], "COOP", signal, button.pos, button.size);
                 add.nextSelectable[0] = add;
                 add.nextSelectable[2] = add;
             }

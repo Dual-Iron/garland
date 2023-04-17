@@ -15,7 +15,7 @@ namespace Server;
 // Analyze for StoryGameSession and IsStoryGameSession - ex LizardAI::GiftReceived and various creature relationships are weird
 // Maybe look into an optional gossip-based reputation system instead of community relationships
 // Also, add a configurable chance for lineages to loop around
-sealed class ServerSession : GameSession
+sealed class ServerSession : StoryGameSession
 {
     record struct PeerData(string Name, int Pid);
 
@@ -27,15 +27,14 @@ sealed class ServerSession : GameSession
         return hash;
     }
 
-    public ServerSession(SlugcatStats.Name slugcatWorld, RainWorldGame game) : base(game)
+    public ServerSession(SlugcatStats.Name slugcatWorld, RainWorldGame game) : base(slugcatWorld, game)
     {
-        SlugcatWorld = slugcatWorld;
         RoomRealizer = new(game, this);
+        playerSessionRecords[0] = new(0);
     }
 
-    public readonly SlugcatStats.Name SlugcatWorld;
     public readonly ServerRoomLogic RoomRealizer;
-    public readonly List<Common.Input> LastInput = new();
+    public readonly List<Input> LastInput = new();
     public readonly ServerSaveState Save = new();
 
     // Decided whenever a peer logs in.
@@ -123,7 +122,7 @@ sealed class ServerSession : GameSession
             AbstractCreature player = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, CreateNewPlayerPos(), id);
             player.state = new PlayerState(player, pid, SlugcatStats.Name.White, false);
 
-            base.AddPlayer(player);
+            AddPlayer(player);
         }
 
         return Players[pid];
@@ -158,12 +157,13 @@ sealed class ServerSession : GameSession
 
     public override void AddPlayer(AbstractCreature player)
     {
-        if (player.PlayerState().playerNumber == -1) {
-            base.AddPlayer(player);
+        if (player.PlayerState().playerNumber < 0) {
+            Main.Log.LogError($"Adding player with negative ID! {player}");
         }
-        else {
-            throw new ArgumentException($"Players with no associated client must have a playerNumber of -1.");
+        else if (playerSessionRecords.Length < player.PlayerState().playerNumber + 1) {
+            Array.Resize(ref playerSessionRecords, player.PlayerState().playerNumber + 1);
         }
+        base.AddPlayer(player);
     }
 
     public SharedPlayerData? GetPlayerData(int pid) => pid >= 0 && pid < Save.playerData.Count ? Save.playerData[pid].Shared : null;

@@ -114,7 +114,7 @@ sealed class ClientRoomLogic
             // Set this before realizing player (so slugcatStats is not null)
             session.ClientData[packet.ID] = SharedPlayerData.FromPacket(packet);
 
-            AbstractCreature p = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, new(packet.Room, 0, 0, -1), new(-1, packet.ID));
+            AbstractCreature p = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, new(game.world.GetAbstractRoom(packet.Room).index, 0, 0, -1), new(-1, packet.ID));
             p.state = new PlayerState(p, playerNumber: packet.ID, slugcatCharacter: new("Garland Player " + packet.ID), false);
             p.Room.AddEntity(p);
             p.RealizeInRoom();

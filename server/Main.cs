@@ -1,8 +1,12 @@
 ﻿using BepInEx.Logging;
 using Common;
+using Kittehface.Framework20;
 using LiteNetLib;
 using LiteNetLib.Utils;
+using MonoMod.RuntimeDetour;
 using System;
+using System.IO;
+using System.Reflection;
 using UnityEngine;
 
 namespace Server;
@@ -91,6 +95,13 @@ partial class Main
 
         On.RainWorld.Start += RainWorld_Start;
         On.RainWorld.Update += RainWorld_Update;
+        On.RainWorldSteamManager.ctor += IgnoreSteam;
+
+        // Ignore all controller and keyboard input for server
+        new Hook(typeof(Rewired.Player).GetMethod("GetButton", new Type[] { typeof(int) }), GetInput);
+
+        // Move save data to within server folder
+        new NativeDetour(typeof(Application).GetMethod("get_persistentDataPath").CreateDelegate(typeof(Func<string>)), SavePath);
 
         // Small optimization
         On.SoundLoader.ShouldSoundPlay += delegate { return false; };
@@ -146,5 +157,22 @@ partial class Main
         catch (Exception e) {
             Log.LogError($"Exception in update logic. {e}");
         }
+    }
+
+    private static string SavePath()
+    {
+        return Path.Combine(Application.streamingAssetsPath, "../../../save");
+    }
+
+    private bool GetInput(Func<Rewired.Player, int, bool> orig, Rewired.Player self, int actionId)
+    {
+        return false;
+    }
+
+    private void IgnoreSteam(On.RainWorldSteamManager.orig_ctor orig, RainWorldSteamManager self, ProcessManager manager)
+    {
+        self.ID = ProcessManager.ProcessID.RainWorldSteamManager;
+        self.manager = manager;
+        self.shutdown = true;
     }
 }

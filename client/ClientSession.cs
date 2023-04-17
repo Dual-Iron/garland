@@ -3,16 +3,15 @@ using System.Collections.Generic;
 
 namespace Client;
 
-sealed class ClientSession : GameSession
+sealed class ClientSession : StoryGameSession
 {
-    public ClientSession(SlugcatStats.Name slugcatWorld, int clientPid, RainWorldGame game) : base(game)
+    public ClientSession(SlugcatStats.Name slugcatWorld, int clientPid, RainWorldGame game) : base(slugcatWorld, game)
     {
-        SlugcatWorld = slugcatWorld;
         ClientPid = clientPid;
         RoomRealizer = new(game, this);
+        playerSessionRecords[0] = new(0);
     }
 
-    public readonly SlugcatStats.Name SlugcatWorld;
     public readonly int ClientPid;
     public readonly ClientRoomLogic RoomRealizer;
     public readonly Dictionary<int, PhysicalObject> Objects = new();

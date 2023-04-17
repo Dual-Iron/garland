@@ -23,6 +23,9 @@ partial class Main
         // Prevent world creatures from spawning as client
         new Hook(typeof(RainWorldGame).GetMethod("get_setupValues"), getSetupValues);
 
+        // Prevent overwriting any vanilla saves
+        new Hook(typeof(Options).GetMethod("get_SaveFileName"), getSaveFileName);
+
         // Prevent spawning various placed physical objects, and random objects like spears and rocks
         On.Room.ctor += Room_ctor;
 
@@ -33,9 +36,11 @@ partial class Main
         On.RainWorldGame.Update += ExitOnDisconnect;
         On.RainWorldGame.ExitToMenu += DisconnectOnExit;
 
+        // Do not
+        On.RainWorldGame.GameOver += RainWorldGame_GameOver;
+
         // Prevent errors and abnormal behavior with custom session type
         On.OverWorld.ctor += OverWorld_ctor;
-        On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.World.ctor += World_ctor;
         On.HUD.HUD.InitSinglePlayerHud += HUD_InitSinglePlayerHud;
         IL.RainWorldGame.Update += FixPauseAndCrash; // Custom pause menu logic + update ClientRoomLogic
@@ -48,7 +53,7 @@ partial class Main
 
     private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => self.Data()?.Stats() ?? orig(self);
 
-    private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.slugcatStats.malnourished;
+    private readonly Func<Func<Player, bool>, Player, bool> getMalnourished = (orig, self) => self.InClientSession() ? self.slugcatStats.malnourished : orig(self);
     
     private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => {
         if (self.world.game.session is ClientSession) {
@@ -64,12 +69,18 @@ partial class Main
         return orig(game);
     };
 
+    private readonly Func<Func<Options, string>, Options, string> getSaveFileName = (orig, self) => {
+        if (self.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession) {
+            return "sav-client-dummy";
+        }
+        return orig(self);
+    };
 
     SlugcatStats.Name? storyCharOverride = null;
     private void Room_ctor(On.Room.orig_ctor orig, Room self, RainWorldGame game, World world, AbstractRoom abstractRoom)
     {
         if (game?.session is ClientSession session) {
-            storyCharOverride = session.SlugcatWorld;
+            storyCharOverride = session.saveStateNumber;
             orig(self, game, world, abstractRoom);
 
             // Don't spawn physical objects!!
@@ -104,6 +115,13 @@ partial class Main
         orig(self);
     }
 
+    private void RainWorldGame_GameOver(On.RainWorldGame.orig_GameOver orig, RainWorldGame self, Creature.Grasp dependentOnGrasp)
+    {
+        if (!self.InClientSession()) {
+            orig(self, dependentOnGrasp);
+        }
+    }
+
     private void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
         if (startPacket is EnterSession session) {
@@ -112,30 +130,6 @@ partial class Main
         }
 
         orig(self, game);
-    }
-
-    private void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
-    {
-        if (self.game?.session is not ClientSession || !startPacket.HasValue) {
-            orig(self);
-            return;
-        }
-
-        string startingRoom = self.game.startingRoom;
-        string[] split = startingRoom.Split('_');
-        if (split.Length < 2) {
-            throw new InvalidOperationException($"Starting room is invalid: {startingRoom}");
-        }
-        string startingRegion = split[0];
-
-        if (Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", startingRegion)) { }
-        else if (split.Length > 2 && Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", split[1]))
-            startingRegion = split[1];
-        else
-            throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
-
-        self.LoadWorld(startingRegion, new(startPacket.Value.SlugcatWorld), false);
-        self.FIRSTROOM = startingRoom;
     }
 
     private void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
@@ -249,6 +243,16 @@ partial class Main
     private void RainWorldGame_ctor(ILContext il)
     {
         ILCursor cursor = new(il);
+
+        cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
+        cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
+        cursor.Emit(OpCodes.Ldarg_0);
+        cursor.EmitDelegate(ShouldSpawnPlayers);
+
+        static bool ShouldSpawnPlayers(bool orig, RainWorldGame game)
+        {
+            return orig && game.session is not ClientSession;
+        }
 
         cursor.Index = cursor.Body.Instructions.Count - 1;
 

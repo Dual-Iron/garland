@@ -19,15 +19,14 @@ partial class Main
         // Fix rain
         new Hook(typeof(RainCycle).GetMethod("get_RainApproaching"), getRainApproaching);
 
-        // Fix SlugcatWorld
-        On.RoomSettings.ctor += RoomSettings_ctor;
-
         // Jump right into the game immediately (because lobbies aren't implemented)
         On.RainWorld.LoadSetupValues += RainWorld_LoadSetupValues;
 
+        // Do not
+        On.RainWorldGame.GameOver += delegate { };
+
         // Prevent errors and abnormal behavior with custom session type
         On.OverWorld.ctor += OverWorld_ctor;
-        On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.World.ctor += World_ctor;
         IL.RainWorldGame.Update += RainWorldGame_Update;
 
@@ -41,11 +40,6 @@ partial class Main
 
     private readonly Func<Func<RainCycle, float>, RainCycle, float> getRainApproaching = (orig, self) => Mathf.InverseLerp(0f, 2400f, self.TimeUntilRain);
 
-    private void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, SlugcatStats.Name playerChar)
-    {
-        orig(self, name, region, template, firstTemplate, new(ServerConfig.SlugcatWorld));
-    }
-
     private RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
     {
         return orig(distributionBuild) with { startScreen = false, playMusic = false };
@@ -57,25 +51,6 @@ partial class Main
         game.startingRoom = ServerConfig.StartingRoom;
 
         orig(self, game);
-    }
-
-    private void OverWorld_LoadFirstWorld(On.OverWorld.orig_LoadFirstWorld orig, OverWorld self)
-    {
-        string startingRoom = self.game.startingRoom;
-        string[] split = startingRoom.Split('_');
-        if (split.Length < 2) {
-            throw new InvalidOperationException($"Starting room is invalid: {startingRoom}");
-        }
-        string startingRegion = split[0];
-
-        if (Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", startingRegion)) { }
-        else if (split.Length > 2 && Utils.DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", split[1]))
-            startingRegion = split[1];
-        else
-            throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
-
-        self.LoadWorld(startingRegion, new(ServerConfig.SlugcatWorld), false);
-        self.FIRSTROOM = startingRoom;
     }
 
     private void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
@@ -127,6 +102,11 @@ partial class Main
     private void RainWorldGame_ctor(ILContext il)
     {
         ILCursor cursor = new(il);
+
+        cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
+        cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
+        cursor.Emit(OpCodes.Pop);
+        cursor.Emit(OpCodes.Ldc_I4_0);
 
         cursor.Index = cursor.Body.Instructions.Count - 1;
 

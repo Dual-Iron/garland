@@ -17,7 +17,6 @@ partial class Main
         // Check for player input packets and use them
         On.Room.Update += Room_Update;
         On.RWInput.PlayerInput += RWInput_PlayerInput;
-        On.RWInput.PlayerInput += RWInput_PlayerInput;
 
         // Allow omnivorous players to eat meat
         On.Player.CanEatMeat += Player_CanEatMeat;

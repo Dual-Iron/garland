@@ -9,8 +9,8 @@ partial class Main
     private void ObjectHooks()
     {
         // Fix player grabs
-        On.Creature.Grab += Creature_Grab;
-        On.Creature.ReleaseGrasp += Creature_ReleaseGrasp;
+        On.Creature.Grab += PreventGrabs;
+        On.Creature.ReleaseGrasp += PreventReleases;
         On.Player.Grabability += Player_Grabability;
 
         // Set chunk positions etc. Pre- and post-update stuff.
@@ -35,19 +35,20 @@ partial class Main
     }
 
     public static bool GrabPacket = false;
-    private bool Creature_Grab(On.Creature.orig_Grab orig, Creature self, PhysicalObject obj, int graspUsed, int chunkGrabbed, Creature.Grasp.Shareability shareability, float dominance, bool overrideEquallyDominant, bool pacifying)
+    private bool PreventGrabs(On.Creature.orig_Grab orig, Creature self, PhysicalObject obj, int graspUsed, int chunkGrabbed, Creature.Grasp.Shareability shareability, float dominance, bool overrideEquallyDominant, bool pacifying)
     {
-        if (!GrabPacket) return false;
-        return orig(self, obj, graspUsed, chunkGrabbed, shareability, dominance, overrideEquallyDominant, pacifying);
+        return (GrabPacket || !obj.InClientSession()) && orig(self, obj, graspUsed, chunkGrabbed, shareability, dominance, overrideEquallyDominant, pacifying);
     }
-    private void Creature_ReleaseGrasp(On.Creature.orig_ReleaseGrasp orig, Creature self, int grasp)
+    private void PreventReleases(On.Creature.orig_ReleaseGrasp orig, Creature self, int grasp)
     {
-        if (GrabPacket) orig(self, grasp);
+        if (GrabPacket || !self.InClientSession()) {
+            orig(self, grasp);
+        }
     }
 
     private Player.ObjectGrabability Player_Grabability(On.Player.orig_Grabability orig, Player self, PhysicalObject obj)
     {
-        if (self != obj && obj is Player) {
+        if (self != obj && obj is Player && self.InClientSession()) {
             return Player.ObjectGrabability.BigOneHand;
         }
         return orig(self, obj);
@@ -82,6 +83,11 @@ partial class Main
 
     private void Player_ctor(On.Player.orig_ctor orig, Player self, AbstractCreature p, World world)
     {
+        if (!self.InClientSession()) {
+            orig(self, p, world);
+            return;
+        }
+
         int num = p.PlayerState().playerNumber;
         p.PlayerState().playerNumber = 0;
         try { orig(self, p, world); }
@@ -170,10 +176,11 @@ partial class Main
     {
         orig(self, ow);
 
-        if (self.player.Data() is SharedPlayerData data)
+        if (self.player.Data() is SharedPlayerData data) {
             foreach (var tailSeg in self.tail) {
                 tailSeg.rad *= Custom.LerpMap(data.Fat * 0.65f - data.Speed * 0.35f, -1, +1, 0.6f, 1.4f);
             }
+        }
     }
 
     private void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
@@ -227,7 +234,7 @@ partial class Main
 
     private Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, SlugcatStats.Name name)
     {
-        if (Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game && game.session is ClientSession sess &&
+        if (Custom.rainWorld.processManager?.currentMainLoop is RainWorldGame game && game.session is ClientSession sess &&
             name.value.StartsWith("Garland Player ") && int.TryParse(name.value.Substring("Garland Player ".Length), out int playerNum) &&
             sess.ClientData.TryGetValue(playerNum, out var data)) {
             return data.SkinColor;
@@ -238,6 +245,10 @@ partial class Main
     private void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
     {
         orig(self, sLeaser, rCam, palette);
+
+        if (!self.player.InClientSession()) {
+            return;
+        }
 
         Color bodyColor = PlayerGraphics.SlugcatColor(self.player.playerState.slugcatCharacter);
         Color eyeColor = self.player.Data()?.EyeColor ?? palette.blackColor;
